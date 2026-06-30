@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  phone        String?
+  passwordHash String
+  role         String    @default("CUSTOMER")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  addresses    Address[]
+  orders       Order[]
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String   @default("Home")
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  country   String   @default("India")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String
+  imageUrl    String?
+  shippingFee Int       @default(0)
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id                  String      @id @default(cuid())
+  categoryId          String
+  name                String
+  slug                String      @unique
+  description         String
+  story               String
+  price               Int
+  compareAtPrice      Int?
+  imageUrl            String
+  inventory           Int         @default(0)
+  isFeatured          Boolean     @default(false)
+  isActive            Boolean     @default(true)
+  handmadeDaysMin     Int         @default(5)
+  handmadeDaysMax     Int         @default(12)
+  customizationFields String      @default("[]")
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  category            Category    @relation(fields: [categoryId], references: [id])
+  orderItems          OrderItem[]
+}
+
+model Coupon {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  description String
+  type        String    @default("PERCENT")
+  value       Int
+  minSubtotal Int       @default(0)
+  usageLimit  Int?
+  isActive    Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Order {
+  id                 String          @id @default(cuid())
+  orderNumber        String          @unique
+  userId             String
+  status             String          @default("PLACED")
+  paymentStatus      String          @default("PENDING")
+  currency           String          @default("INR")
+  subtotal           Int
+  shippingFee        Int
+  discount           Int             @default(0)
+  total              Int
+  customNotes        String?
+  deliveryName       String
+  deliveryPhone      String
+  deliveryLine1      String
+  deliveryLine2      String?
+  deliveryCity       String
+  deliveryState      String
+  deliveryPincode    String
+  razorpayOrderId    String?
+  razorpayPaymentId  String?
+  razorpaySignature  String?
+  courierName        String?
+  courierTrackingId  String?
+  courierTrackingUrl String?
+  shippedAt          DateTime?
+  deliveredAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation(fields: [userId], references: [id])
+  items              OrderItem[]
+  timeline           OrderTimeline[]
+}
+
+model OrderItem {
+  id              String  @id @default(cuid())
+  orderId         String
+  productId       String?
+  productName     String
+  productImageUrl String
+  unitPrice       Int
+  quantity        Int
+  customization   String  @default("{}")
+  order           Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+}
+
+model OrderTimeline {
+  id                String   @id @default(cuid())
+  orderId           String
+  status            String
+  title             String
+  note              String
+  actor             String   @default("SYSTEM")
+  isCustomerVisible Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String
+  ctaLabel  String
+  ctaHref   String
+  imageUrl  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

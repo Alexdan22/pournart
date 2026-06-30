@@ -1,0 +1,24 @@
+<svg width="720" height="260" viewBox="0 0 720 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Pour n Art wave wordmark logo concept</title>
+  <desc id="desc">A refined wordmark logo with resin wave, gold pour drop, and heart accent.</desc>
+  <defs>
+    <linearGradient id="wave" x1="60" y1="154" x2="640" y2="154" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F766E"/>
+      <stop offset="0.46" stop-color="#2F80ED"/>
+      <stop offset="1" stop-color="#C99A3D"/>
+    </linearGradient>
+    <filter id="wordShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#10191C" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  <rect width="720" height="260" rx="34" fill="#FFF8EE"/>
+  <g filter="url(#wordShadow)">
+    <path d="M61 165C129 123 195 195 268 154C337 115 396 133 456 158C527 188 579 154 641 120" stroke="url(#wave)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M91 146C130 133 164 164 204 157" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.72"/>
+    <path d="M575 82C575 82 594 103 594 118C594 130 585.8 137 575 137C564.2 137 556 130 556 118C556 103 575 82 575 82Z" fill="#C99A3D"/>
+    <path d="M548 141C539 132 527 136 527 149C527 166 553 177 575 198C597 177 623 166 623 149C623 136 611 132 602 141C592 151 584 151 575 139C566 151 558 151 548 141Z" fill="#FFFFFF" stroke="#10191C" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+  <text x="58" y="116" fill="#10191C" font-family="Cormorant Garamond, Georgia, serif" font-size="76" font-weight="700">Pour n Art</text>
+  <text x="62" y="211" fill="#526166" font-family="Manrope, Arial, sans-serif" font-size="16" font-weight="800" letter-spacing="2.4">POUR AN HEART</text>
+  <text x="264" y="211" fill="#8A6427" font-family="Manrope, Arial, sans-serif" font-size="16" font-weight="700">custom resin gifts made by hand</text>
+</svg>

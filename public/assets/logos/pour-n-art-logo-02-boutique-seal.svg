@@ -1,0 +1,33 @@
+<svg width="720" height="260" viewBox="0 0 720 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Pour n Art boutique seal logo concept</title>
+  <desc id="desc">An elegant circular boutique seal logo for handmade resin art with a heart and pour motif.</desc>
+  <defs>
+    <radialGradient id="sealFill" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(117 82) rotate(56) scale(165)">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.48" stop-color="#FFF8EE"/>
+      <stop offset="1" stop-color="#E5F4F0"/>
+    </radialGradient>
+    <linearGradient id="sealStroke" x1="28" y1="36" x2="218" y2="219" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFDFAF"/>
+      <stop offset="0.46" stop-color="#C99A3D"/>
+      <stop offset="1" stop-color="#2F80ED"/>
+    </linearGradient>
+    <filter id="sealShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#10191C" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+  <rect width="720" height="260" rx="34" fill="#10191C"/>
+  <path d="M0 209C96 172 162 208 247 181C351 148 404 66 531 83C604 92 665 128 720 106V260H0V209Z" fill="#173F5F" opacity="0.28"/>
+  <g filter="url(#sealShadow)">
+    <circle cx="130" cy="130" r="92" fill="url(#sealFill)"/>
+    <circle cx="130" cy="130" r="84" stroke="url(#sealStroke)" stroke-width="3"/>
+    <circle cx="130" cy="130" r="68" stroke="#D7AD57" stroke-width="1.5" stroke-dasharray="3 8"/>
+    <path d="M130 76C130 76 151 98 151 115C151 128 142.2 135 130 135C117.8 135 109 128 109 115C109 98 130 76 130 76Z" fill="#2F80ED" opacity="0.92"/>
+    <path d="M102 129C92 119 78 124 78 139C78 160 108 172 130 195C152 172 182 160 182 139C182 124 168 119 158 129C147 140 139 140 130 126C121 140 113 140 102 129Z" fill="#FFF8EE" stroke="#8A6427" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M94 155C114 164 151 164 171 149" stroke="#2F80ED" stroke-width="5" stroke-linecap="round" opacity="0.48"/>
+  </g>
+  <text x="266" y="112" fill="#FFF8EE" font-family="Cormorant Garamond, Georgia, serif" font-size="60" font-weight="700">Pour n Art</text>
+  <text x="269" y="151" fill="#F2DAA2" font-family="Manrope, Arial, sans-serif" font-size="17" font-weight="800" letter-spacing="2.6">HANDMADE RESIN ART</text>
+  <path d="M270 172C325 162 378 181 433 171C492 160 542 131 611 145" stroke="#C99A3D" stroke-width="3" stroke-linecap="round"/>
+  <text x="270" y="204" fill="#D8E8EA" font-family="Manrope, Arial, sans-serif" font-size="15" font-weight="700">A pour from the heart, preserved in resin</text>
+</svg>

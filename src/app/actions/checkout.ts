@@ -1,0 +1,191 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { getRazorpayClient, isRazorpayConfigured } from "@/lib/razorpay";
+import { requireUser } from "@/lib/session";
+import { sendOrderNotification } from "@/lib/notifications";
+import type { ActionState } from "@/lib/types";
+
+const checkoutItemSchema = z.object({
+  productId: z.string().min(1),
+  quantity: z.coerce.number().int().min(1).max(20),
+  customization: z.record(z.string(), z.string()).default({}),
+});
+
+const checkoutSchema = z.object({
+  cart: z.array(checkoutItemSchema).min(1, "Your cart is empty."),
+  deliveryName: z.string().min(2, "Enter a delivery name."),
+  deliveryPhone: z.string().min(8, "Enter a delivery phone."),
+  deliveryLine1: z.string().min(5, "Enter a delivery address."),
+  deliveryLine2: z.string().optional(),
+  deliveryCity: z.string().min(2, "Enter a city."),
+  deliveryState: z.string().min(2, "Enter a state."),
+  deliveryPincode: z.string().min(5, "Enter a pincode."),
+  customNotes: z.string().optional(),
+});
+
+function buildOrderNumber() {
+  const suffix = Date.now().toString(36).toUpperCase();
+  return `PNA-${suffix}`;
+}
+
+export async function createOrderAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await requireUser();
+  let cart: unknown;
+
+  try {
+    cart = JSON.parse(String(formData.get("cartJson") || "[]"));
+  } catch {
+    return { message: "Cart data could not be read. Please refresh and try again." };
+  }
+
+  const parsed = checkoutSchema.safeParse({
+    cart,
+    deliveryName: formData.get("deliveryName"),
+    deliveryPhone: formData.get("deliveryPhone"),
+    deliveryLine1: formData.get("deliveryLine1"),
+    deliveryLine2: formData.get("deliveryLine2") || "",
+    deliveryCity: formData.get("deliveryCity"),
+    deliveryState: formData.get("deliveryState"),
+    deliveryPincode: formData.get("deliveryPincode"),
+    customNotes: formData.get("customNotes") || "",
+  });
+
+  if (!parsed.success) {
+    return {
+      message: "Please check the checkout details.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const productIds = parsed.data.cart.map((item) => item.productId);
+  const products = await prisma.product.findMany({
+    where: { id: { in: productIds }, isActive: true },
+    include: { category: true },
+  });
+  const productById = new Map(products.map((product) => [product.id, product]));
+
+  if (products.length !== new Set(productIds).size) {
+    return { message: "Some products in your cart are no longer available." };
+  }
+
+  let subtotal = 0;
+  const orderItems = parsed.data.cart.map((item) => {
+    const product = productById.get(item.productId);
+
+    if (!product) {
+      throw new Error(`Missing product ${item.productId}`);
+    }
+
+    subtotal += product.price * item.quantity;
+    return {
+      productId: product.id,
+      productName: product.name,
+      productImageUrl: product.imageUrl,
+      unitPrice: product.price,
+      quantity: item.quantity,
+      customization: JSON.stringify(item.customization),
+    };
+  });
+
+  const shippingFee = products
+    .filter((product, index, allProducts) => {
+      return allProducts.findIndex((candidate) => candidate.categoryId === product.categoryId) === index;
+    })
+    .reduce((total, product) => total + product.category.shippingFee, 0);
+  const total = subtotal + shippingFee;
+  const orderNumber = buildOrderNumber();
+
+  let order = await prisma.order.create({
+    data: {
+      orderNumber,
+      userId: session.id,
+      subtotal,
+      shippingFee,
+      total,
+      customNotes: parsed.data.customNotes || null,
+      deliveryName: parsed.data.deliveryName,
+      deliveryPhone: parsed.data.deliveryPhone,
+      deliveryLine1: parsed.data.deliveryLine1,
+      deliveryLine2: parsed.data.deliveryLine2 || null,
+      deliveryCity: parsed.data.deliveryCity,
+      deliveryState: parsed.data.deliveryState,
+      deliveryPincode: parsed.data.deliveryPincode,
+      items: { create: orderItems },
+      timeline: {
+        create: {
+          status: "PLACED",
+          title: "Order placed",
+          note: "We received your order details. Payment confirmation is pending.",
+          actor: "CUSTOMER",
+        },
+      },
+    },
+  });
+
+  if (isRazorpayConfigured()) {
+    const razorpay = getRazorpayClient();
+
+    if (razorpay) {
+      const razorpayOrder = (await razorpay.orders.create({
+        amount: total,
+        currency: "INR",
+        receipt: orderNumber,
+        notes: {
+          orderNumber,
+          userId: session.id,
+        },
+      })) as { id: string };
+
+      order = await prisma.order.update({
+        where: { id: order.id },
+        data: { razorpayOrderId: razorpayOrder.id },
+      });
+    }
+  }
+
+  await sendOrderNotification("ORDER_PLACED", order.id);
+
+  redirect(`/checkout/payment/${order.orderNumber}`);
+}
+
+export async function markLocalPaymentPaidAction(formData: FormData) {
+  const session = await requireUser();
+  const orderNumber = String(formData.get("orderNumber") || "");
+
+  if (isRazorpayConfigured()) {
+    redirect(`/checkout/payment/${orderNumber}`);
+  }
+
+  const order = await prisma.order.findFirst({
+    where: { orderNumber, userId: session.id },
+  });
+
+  if (!order) {
+    redirect("/orders");
+  }
+
+  const updatedOrder = await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      paymentStatus: "PAID",
+      status: "PAYMENT_CONFIRMED",
+      timeline: {
+        create: {
+          status: "PAYMENT_CONFIRMED",
+          title: "Payment confirmed",
+          note: "Local demo payment was marked as paid. Replace this with Razorpay test credentials before launch.",
+          actor: "SYSTEM",
+        },
+      },
+    },
+  });
+
+  await sendOrderNotification("PAYMENT_SUCCESS", updatedOrder.id);
+  redirect(`/orders/${updatedOrder.orderNumber}`);
+}
