@@ -5,6 +5,7 @@ import { mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { defaultStoreSettings } from "@/lib/admin-data";
 import {
   ORDER_STATUSES,
   PAYMENT_STATUSES,
@@ -13,6 +14,9 @@ import {
 } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { dispatchEmailEvent, eventForOrderStatus } from "@/lib/email";
+import { enqueueEmail, processEmailQueue } from "@/lib/email/queue";
+import { getAdminEmail } from "@/lib/email/emailSenders";
+import { getRazorpayClient } from "@/lib/razorpay";
 import { parseRupeesToPaise } from "@/lib/money";
 import { requireAdmin } from "@/lib/session";
 
@@ -136,6 +140,55 @@ async function deleteUploadedProductImage(imageUrl: string) {
   await rm(path.join(productUploadDir, fileName), { force: true });
 }
 
+function appUrl() {
+  return (process.env.EMAIL_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+function revalidateAdminPaths(...paths: string[]) {
+  const uniquePaths = new Set(["/admin", ...paths]);
+
+  for (const pathName of uniquePaths) {
+    revalidatePath(pathName);
+  }
+}
+
+async function createInternalNote({
+  targetType,
+  targetId,
+  content,
+  authorId,
+  orderId,
+  userId,
+  contactEnquiryId,
+  reviewId,
+}: {
+  targetType: string;
+  targetId: string;
+  content: string;
+  authorId?: string;
+  orderId?: string;
+  userId?: string;
+  contactEnquiryId?: string;
+  reviewId?: string;
+}) {
+  if (!content.trim()) {
+    return null;
+  }
+
+  return prisma.internalNote.create({
+    data: {
+      targetType,
+      targetId,
+      content: content.trim(),
+      authorId,
+      orderId,
+      userId,
+      contactEnquiryId,
+      reviewId,
+    },
+  });
+}
+
 async function productImageFromForm(formData: FormData, fallback = defaultProductImage) {
   const currentImageUrl = String(formData.get("currentImageUrl") || "");
   const uploadedImageUrl = await saveProductImage(formData.get("imageFile"));
@@ -161,10 +214,13 @@ export async function createCategoryAction(formData: FormData) {
       shippingFee: parseRupeesToPaise(formData.get("shippingFee")),
       sortOrder: Number(formData.get("sortOrder") || 0),
       isActive: formData.get("isActive") === "on",
+      isFeatured: formData.get("isFeatured") === "on",
+      metaTitle: String(formData.get("metaTitle") || "") || null,
+      metaDescription: String(formData.get("metaDescription") || "") || null,
     },
   });
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/categories");
   revalidatePath("/products");
 }
 
@@ -183,10 +239,34 @@ export async function updateCategoryAction(formData: FormData) {
       shippingFee: parseRupeesToPaise(formData.get("shippingFee")),
       sortOrder: Number(formData.get("sortOrder") || 0),
       isActive: formData.get("isActive") === "on",
+      isFeatured: formData.get("isFeatured") === "on",
+      metaTitle: String(formData.get("metaTitle") || "") || null,
+      metaDescription: String(formData.get("metaDescription") || "") || null,
     },
   });
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/categories");
+  revalidatePath("/products");
+}
+
+export async function updateCategoryOrderAction(formData: FormData) {
+  await requireAdmin();
+
+  const ids = String(formData.get("categoryOrder") || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  await Promise.all(
+    ids.map((id, index) =>
+      prisma.category.update({
+        where: { id },
+        data: { sortOrder: index + 1 },
+      }),
+    ),
+  );
+
+  revalidateAdminPaths("/admin/categories");
   revalidatePath("/products");
 }
 
@@ -210,6 +290,8 @@ export async function createProductAction(formData: FormData) {
         : null,
       imageUrl,
       inventory: Number(formData.get("inventory") || 0),
+      lowStockThreshold: Number(formData.get("lowStockThreshold") || 3),
+      adminStatus: formData.get("isActive") === "on" ? "PUBLISHED" : "DRAFT",
       isFeatured: formData.get("isFeatured") === "on",
       isActive: formData.get("isActive") === "on",
       handmadeDaysMin: Number(formData.get("handmadeDaysMin") || 5),
@@ -224,7 +306,7 @@ export async function createProductAction(formData: FormData) {
     await dispatchEmailEvent("LOW_INVENTORY", { productId: product.id });
   }
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/products", "/admin/inventory");
   revalidatePath("/products");
 }
 
@@ -250,6 +332,9 @@ export async function updateProductAction(formData: FormData) {
         : null,
       imageUrl,
       inventory: Number(formData.get("inventory") || 0),
+      lowStockThreshold: Number(formData.get("lowStockThreshold") || 3),
+      adminStatus: String(formData.get("adminStatus") || (formData.get("isActive") === "on" ? "PUBLISHED" : "DRAFT")),
+      archivedAt: String(formData.get("adminStatus") || "") === "ARCHIVED" ? new Date() : null,
       isFeatured: formData.get("isFeatured") === "on",
       isActive: formData.get("isActive") === "on",
       handmadeDaysMin: Number(formData.get("handmadeDaysMin") || 5),
@@ -264,7 +349,7 @@ export async function updateProductAction(formData: FormData) {
     await dispatchEmailEvent("LOW_INVENTORY", { productId: product.id });
   }
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/products", "/admin/inventory");
   revalidatePath("/products");
   revalidatePath(`/products/${product.slug}`);
 }
@@ -282,7 +367,7 @@ export async function deleteProductPhotoAction(formData: FormData) {
     data: { imageUrl: defaultProductImage },
   });
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/products", "/admin/inventory");
   revalidatePath("/products");
   revalidatePath(`/products/${product.slug}`);
 }
@@ -292,15 +377,122 @@ export async function removeProductAction(formData: FormData) {
 
   await prisma.product.update({
     where: { id: String(formData.get("id") || "") },
-    data: { isActive: false },
+    data: { isActive: false, adminStatus: "ARCHIVED", archivedAt: new Date() },
   });
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/products", "/admin/inventory");
+  revalidatePath("/products");
+}
+
+export async function bulkProductAction(formData: FormData) {
+  await requireAdmin();
+
+  const action = String(formData.get("bulkAction") || "");
+  const ids = formData.getAll("productId").map((value) => String(value)).filter(Boolean);
+
+  if (!ids.length) {
+    return;
+  }
+
+  if (action === "delete") {
+    for (const id of ids) {
+      const orderItemCount = await prisma.orderItem.count({ where: { productId: id } });
+
+      if (orderItemCount > 0) {
+        await prisma.product.update({
+          where: { id },
+          data: { isActive: false, adminStatus: "ARCHIVED", archivedAt: new Date() },
+        });
+      } else {
+        const product = await prisma.product.findUnique({ where: { id }, select: { imageUrl: true } });
+        if (product?.imageUrl) {
+          await deleteUploadedProductImage(product.imageUrl);
+        }
+        await prisma.product.delete({ where: { id } });
+      }
+    }
+  }
+
+  if (action === "archive") {
+    await prisma.product.updateMany({
+      where: { id: { in: ids } },
+      data: { isActive: false, adminStatus: "ARCHIVED", archivedAt: new Date() },
+    });
+  }
+
+  if (action === "publish") {
+    await prisma.product.updateMany({
+      where: { id: { in: ids } },
+      data: { isActive: true, adminStatus: "PUBLISHED", archivedAt: null },
+    });
+  }
+
+  if (action === "draft") {
+    await prisma.product.updateMany({
+      where: { id: { in: ids } },
+      data: { isActive: false, adminStatus: "DRAFT", archivedAt: null },
+    });
+  }
+
+  revalidateAdminPaths("/admin/products", "/admin/inventory");
+  revalidatePath("/products");
+}
+
+export async function quickUpdateProductAction(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") || "");
+  const status = String(formData.get("adminStatus") || "PUBLISHED");
+  const product = await prisma.product.update({
+    where: { id },
+    data: {
+      name: String(formData.get("name") || ""),
+      categoryId: String(formData.get("categoryId") || ""),
+      price: parseRupeesToPaise(formData.get("price")),
+      inventory: Number(formData.get("inventory") || 0),
+      lowStockThreshold: Number(formData.get("lowStockThreshold") || 3),
+      adminStatus: status,
+      isActive: status === "PUBLISHED",
+      archivedAt: status === "ARCHIVED" ? new Date() : null,
+    },
+  });
+
+  revalidateAdminPaths("/admin/products", "/admin/inventory");
+  revalidatePath("/products");
+  revalidatePath(`/products/${product.slug}`);
+}
+
+export async function restockProductAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const productId = String(formData.get("productId") || "");
+  const delta = Number(formData.get("delta") || 0);
+
+  if (!productId || !Number.isFinite(delta) || delta === 0) {
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.product.update({
+      where: { id: productId },
+      data: { inventory: { increment: delta } },
+    }),
+    prisma.inventoryAdjustment.create({
+      data: {
+        productId,
+        delta,
+        reason: String(formData.get("reason") || "RESTOCK"),
+        note: String(formData.get("note") || "") || null,
+        actorId: admin.id,
+      },
+    }),
+  ]);
+
+  revalidateAdminPaths("/admin/inventory", "/admin/products");
   revalidatePath("/products");
 }
 
 export async function updateOrderAction(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const status = z.enum(ORDER_STATUSES).parse(formData.get("status"));
   const paymentStatus = z.enum(PAYMENT_STATUSES).parse(formData.get("paymentStatus"));
@@ -329,13 +521,351 @@ export async function updateOrderAction(formData: FormData) {
     },
   });
 
+  await createInternalNote({
+    targetType: "Order",
+    targetId: order.id,
+    orderId: order.id,
+    authorId: admin.id,
+    content: String(formData.get("internalNote") || ""),
+  });
+
   await dispatchEmailEvent(eventForOrderStatus(status), {
     orderId: order.id,
     note,
     status,
   });
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/orders", `/admin/orders/${order.orderNumber}`);
   revalidatePath(`/orders/${order.orderNumber}`);
+}
+
+export async function addInternalNoteAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const targetType = String(formData.get("targetType") || "");
+  const targetId = String(formData.get("targetId") || "");
+
+  await createInternalNote({
+    targetType,
+    targetId,
+    authorId: admin.id,
+    content: String(formData.get("content") || ""),
+    orderId: String(formData.get("orderId") || "") || undefined,
+    userId: String(formData.get("userId") || "") || undefined,
+    contactEnquiryId: String(formData.get("contactEnquiryId") || "") || undefined,
+    reviewId: String(formData.get("reviewId") || "") || undefined,
+  });
+
+  revalidateAdminPaths(
+    "/admin/orders",
+    "/admin/customers",
+    "/admin/contact-enquiries",
+    "/admin/reviews",
+    String(formData.get("returnPath") || ""),
+  );
+}
+
+export async function sendManualOrderEmailAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const orderId = String(formData.get("orderId") || "");
+  const subject = String(formData.get("subject") || "").trim();
+  const message = String(formData.get("message") || "").trim();
+
+  if (!orderId || !subject || !message) {
+    return;
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { user: true },
+  });
+
+  if (!order) {
+    return;
+  }
+
+  await enqueueEmail({
+    event: "ORDER_PROGRESS_UPDATED",
+    to: order.user.email,
+    subject,
+    template: "CustomerMessage",
+    role: "orders",
+    orderId: order.id,
+    userId: order.userId,
+    data: {
+      appUrl: appUrl(),
+      supportEmail: getAdminEmail(),
+      instagramUrl: "https://www.instagram.com/pour_n_art/",
+      customerName: order.user.name,
+      adminTitle: subject,
+      message,
+      preheader: subject,
+    },
+  });
+  await createInternalNote({
+    targetType: "Order",
+    targetId: order.id,
+    orderId: order.id,
+    authorId: admin.id,
+    content: `Manual email queued: ${subject}`,
+  });
+
+  revalidateAdminPaths(`/admin/orders/${order.orderNumber}`, "/admin/email-queue");
+}
+
+export async function sendCustomerEmailAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId") || "");
+  const subject = String(formData.get("subject") || "").trim();
+  const message = String(formData.get("message") || "").trim();
+
+  if (!userId || !subject || !message) {
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+
+  if (!user) {
+    return;
+  }
+
+  await enqueueEmail({
+    event: "USER_CREATED",
+    to: user.email,
+    subject,
+    template: "CustomerMessage",
+    role: "studio",
+    userId: user.id,
+    data: {
+      appUrl: appUrl(),
+      supportEmail: getAdminEmail(),
+      instagramUrl: "https://www.instagram.com/pour_n_art/",
+      customerName: user.name,
+      adminTitle: subject,
+      message,
+      preheader: subject,
+    },
+  });
+  await createInternalNote({
+    targetType: "User",
+    targetId: user.id,
+    userId: user.id,
+    authorId: admin.id,
+    content: `Manual customer email queued: ${subject}`,
+  });
+
+  revalidateAdminPaths(`/admin/customers/${user.id}`, "/admin/email-queue");
+}
+
+export async function resendOrderEmailAction(formData: FormData) {
+  const event = String(formData.get("event") || "") as Parameters<typeof dispatchEmailEvent>[0];
+  const orderId = String(formData.get("orderId") || "");
+
+  await requireAdmin();
+
+  if (!orderId || !event) {
+    return;
+  }
+
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } });
+  await dispatchEmailEvent(event, { orderId });
+  revalidateAdminPaths(order ? `/admin/orders/${order.orderNumber}` : "/admin/orders", "/admin/email-queue");
+}
+
+export async function refundOrderAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const orderId = String(formData.get("orderId") || "");
+  const reason = String(formData.get("reason") || "Admin refund").trim();
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+  });
+
+  if (!order) {
+    return;
+  }
+
+  let refundNote = "Refund recorded locally.";
+  const razorpay = getRazorpayClient();
+
+  if (razorpay && order.razorpayPaymentId) {
+    const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+      amount: order.total,
+      notes: { orderNumber: order.orderNumber, reason },
+    });
+    refundNote = `Razorpay refund requested: ${JSON.stringify(refund)}`;
+  }
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      paymentStatus: "REFUNDED",
+      timeline: {
+        create: {
+          status: order.status,
+          title: "Refund processed",
+          note: reason || refundNote,
+          actor: "ADMIN",
+          isCustomerVisible: false,
+        },
+      },
+    },
+  });
+  await createInternalNote({
+    targetType: "Order",
+    targetId: order.id,
+    orderId: order.id,
+    authorId: admin.id,
+    content: `${refundNote} ${reason}`.trim(),
+  });
+
+  revalidateAdminPaths("/admin/orders", `/admin/orders/${order.orderNumber}`);
+}
+
+export async function cancelOrderAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const orderId = String(formData.get("orderId") || "");
+  const note = String(formData.get("note") || getDefaultOrderStatusNote("CANCELLED"));
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status: "CANCELLED",
+      timeline: {
+        create: {
+          status: "CANCELLED",
+          title: getOrderStatusLabel("CANCELLED"),
+          note,
+          actor: "ADMIN",
+        },
+      },
+    },
+  });
+
+  await createInternalNote({
+    targetType: "Order",
+    targetId: order.id,
+    orderId: order.id,
+    authorId: admin.id,
+    content: `Order cancelled. ${note}`,
+  });
+  await dispatchEmailEvent("ORDER_CANCELLED", { orderId: order.id, note, status: "CANCELLED" });
+
+  revalidateAdminPaths("/admin/orders", `/admin/orders/${order.orderNumber}`);
+  revalidatePath(`/orders/${order.orderNumber}`);
+}
+
+export async function retryEmailAction(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") || "");
+  await prisma.emailQueue.update({
+    where: { id },
+    data: {
+      status: "PENDING",
+      attempts: 0,
+      lastError: null,
+      scheduledAt: new Date(),
+    },
+  });
+  void processEmailQueue().catch((error) => {
+    console.error("[admin:email-retry-failed]", error);
+  });
+
+  revalidateAdminPaths("/admin/email-queue");
+}
+
+export async function cancelEmailAction(formData: FormData) {
+  await requireAdmin();
+
+  await prisma.emailQueue.update({
+    where: { id: String(formData.get("id") || "") },
+    data: {
+      status: "CANCELLED",
+      lastError: "Cancelled by admin.",
+    },
+  });
+
+  revalidateAdminPaths("/admin/email-queue");
+}
+
+export async function updateReviewAction(formData: FormData) {
+  await requireAdmin();
+
+  const id = String(formData.get("id") || "");
+  const status = String(formData.get("status") || "PENDING");
+  const reply = String(formData.get("reply") || "").trim();
+
+  await prisma.review.update({
+    where: { id },
+    data: {
+      status,
+      isFeatured: formData.get("isFeatured") === "on",
+      reply: reply || null,
+      repliedAt: reply ? new Date() : null,
+    },
+  });
+
+  revalidateAdminPaths("/admin/reviews");
+  revalidatePath("/products");
+}
+
+export async function updateContactEnquiryAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = String(formData.get("id") || "");
+  const status = String(formData.get("status") || "NEW");
+  const note = String(formData.get("note") || "");
+
+  await prisma.contactEnquiry.update({
+    where: { id },
+    data: { status },
+  });
+  await createInternalNote({
+    targetType: "ContactEnquiry",
+    targetId: id,
+    contactEnquiryId: id,
+    authorId: admin.id,
+    content: note,
+  });
+
+  revalidateAdminPaths("/admin/contact-enquiries");
+}
+
+export async function updateSettingsAction(formData: FormData) {
+  await requireAdmin();
+
+  await Promise.all(
+    defaultStoreSettings.map((setting) =>
+      prisma.storeSetting.upsert({
+        where: { key: setting.key },
+        update: { value: String(formData.get(setting.key) ?? setting.value) },
+        create: {
+          ...setting,
+          value: String(formData.get(setting.key) ?? setting.value),
+        },
+      }),
+    ),
+  );
+
+  revalidateAdminPaths("/admin/settings");
+}
+
+export async function markNotificationReadAction(formData: FormData) {
+  await requireAdmin();
+
+  await prisma.notification.update({
+    where: { id: String(formData.get("id") || "") },
+    data: { status: "READ", readAt: new Date() },
+  });
+
+  revalidateAdminPaths();
+}
+
+export async function markAllNotificationsReadAction() {
+  await requireAdmin();
+
+  await prisma.notification.updateMany({
+    where: { status: "UNREAD" },
+    data: { status: "READ", readAt: new Date() },
+  });
+
+  revalidateAdminPaths();
 }
 
 export async function createCouponAction(formData: FormData) {
@@ -353,7 +883,7 @@ export async function createCouponAction(formData: FormData) {
     },
   });
 
-  revalidatePath("/admin");
+  revalidateAdminPaths("/admin/coupons");
 }
 
 export async function updateBannerAction(formData: FormData) {
@@ -381,5 +911,5 @@ export async function updateBannerAction(formData: FormData) {
   });
 
   revalidatePath("/");
-  revalidatePath("/admin");
+  revalidateAdminPaths();
 }

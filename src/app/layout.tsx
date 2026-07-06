@@ -1,9 +1,5 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist_Mono, Manrope } from "next/font/google";
-import { CartProvider } from "@/components/cart-provider";
-import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -40,12 +36,7 @@ export default function RootLayout({
       className={`${manrope.variable} ${cormorant.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body>
-        <CartProvider>
-          <SiteHeader />
-          <main>{children}</main>
-          <SiteFooter />
-          <MobileBottomNav />
-        </CartProvider>
+        {children}
       </body>
     </html>
   );

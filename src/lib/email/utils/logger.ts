@@ -3,6 +3,8 @@ import type { EmailEventName } from "@/lib/email/types";
 
 type LogEmailInput = {
   queueId?: string;
+  orderId?: string;
+  userId?: string;
   event: EmailEventName;
   recipient: string;
   subject: string;
@@ -16,6 +18,8 @@ export async function logEmail(input: LogEmailInput) {
     await prisma.emailLog.create({
       data: {
         queueId: input.queueId,
+        orderId: input.orderId,
+        userId: input.userId,
         event: input.event,
         recipient: input.recipient,
         subject: input.subject,

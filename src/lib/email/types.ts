@@ -40,11 +40,13 @@ export type EmailTemplateName =
   | "ContactNotification"
   | "LowInventory"
   | "AdminNotification"
+  | "CustomerMessage"
   | "AbandonedCart";
 
 export type EmailQueueStatus = "PENDING" | "PROCESSING" | "SENT" | "FAILED";
 
 export type EmailRecipient = {
+  id?: string;
   email: string;
   name?: string | null;
 };
@@ -130,6 +132,9 @@ export type EmailJobInput = {
   template: EmailTemplateName;
   data: TemplateData;
   event: EmailEventName;
+  orderId?: string;
+  userId?: string;
+  contactEnquiryId?: string;
   role?: EmailRole;
   replyTo?: string;
   scheduledAt?: Date;

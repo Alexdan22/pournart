@@ -10,9 +10,11 @@ import {
   PackageCheck,
   ShieldCheck,
   Sparkles,
+  Star,
   Truck,
 } from "lucide-react";
 import { AddToCartForm } from "@/components/add-to-cart-form";
+import { AnalyticsBeacon } from "@/components/analytics-beacon";
 import { ProductCard } from "@/components/product-card";
 import { getProductBySlug, parseCustomizationFields } from "@/lib/catalog";
 import { defaultWhatsAppMessage } from "@/lib/constants";
@@ -38,16 +40,24 @@ export default async function ProductDetailPage(props: PageProps<"/products/[slu
   const whatsappHref = whatsappNumber
     ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`
     : null;
-  const relatedProducts = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      categoryId: product.categoryId,
-      NOT: { id: product.id },
-    },
-    include: { category: true },
-    orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-    take: 4,
-  });
+  const [relatedProducts, approvedReviews] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        isActive: true,
+        categoryId: product.categoryId,
+        NOT: { id: product.id },
+      },
+      include: { category: true },
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      take: 4,
+    }),
+    prisma.review.findMany({
+      where: { productId: product.id, status: "APPROVED" },
+      include: { user: { select: { name: true } } },
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+      take: 8,
+    }),
+  ]);
   const lovePoints = [
     {
       title: "Handmade from start to finish",
@@ -119,6 +129,7 @@ export default async function ProductDetailPage(props: PageProps<"/products/[slu
 
   return (
     <section className="product-detail">
+      <AnalyticsBeacon event="PRODUCT_VIEWED" productId={product.id} metadata={{ slug: product.slug }} />
       <Link className="text-link" href="/products">
         <ArrowLeft aria-hidden size={16} /> Back to collections
       </Link>
@@ -241,6 +252,30 @@ export default async function ProductDetailPage(props: PageProps<"/products/[slu
           ))}
         </div>
       </section>
+
+      {approvedReviews.length > 0 ? (
+        <section className="product-info-section product-review-section" aria-label="Customer reviews">
+          <div className="product-info-heading">
+            <span className="panel-label">Reviews</span>
+            <h2>What customers shared after delivery.</h2>
+          </div>
+          <div className="review-grid">
+            {approvedReviews.map((review) => (
+              <article className={review.isFeatured ? "review-card featured" : "review-card"} key={review.id}>
+                <span>
+                  {Array.from({ length: review.rating }).map((_, index) => (
+                    <Star aria-hidden fill="currentColor" size={14} key={index} />
+                  ))}
+                </span>
+                <h3>{review.title || "Handcrafted with care"}</h3>
+                <p>{review.body}</p>
+                {review.reply ? <small>Studio reply: {review.reply}</small> : null}
+                <strong>{review.user.name}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {relatedProducts.length > 0 ? (
         <section className="product-related-section">

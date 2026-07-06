@@ -22,6 +22,9 @@ function serializeError(error: unknown) {
 export async function enqueueEmail(input: EmailJobInput) {
   const queueItem = await prisma.emailQueue.create({
     data: {
+      orderId: input.orderId,
+      userId: input.userId,
+      contactEnquiryId: input.contactEnquiryId,
       event: input.event,
       recipient: input.to.trim(),
       subject: input.subject,
@@ -97,6 +100,8 @@ export async function processEmailQueue() {
           });
           await logEmail({
             queueId: job.id,
+            orderId: job.orderId ?? undefined,
+            userId: job.userId ?? undefined,
             event: job.event as EmailJobInput["event"],
             recipient: job.recipient.trim(),
             subject: job.subject,
@@ -118,6 +123,8 @@ export async function processEmailQueue() {
           });
           await logEmail({
             queueId: job.id,
+            orderId: job.orderId ?? undefined,
+            userId: job.userId ?? undefined,
             event: job.event as EmailJobInput["event"],
             recipient: job.recipient.trim(),
             subject: job.subject,

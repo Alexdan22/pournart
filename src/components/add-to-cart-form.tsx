@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
+import { trackAnalyticsEvent } from "@/lib/analytics-client";
 import { formatINR } from "@/lib/money";
 import { warmDisplayCopy } from "@/lib/product-positioning";
 import type { CustomizationField } from "@/lib/types";
@@ -41,6 +42,13 @@ export function AddToCartForm({ product, customizationFields }: AddToCartFormPro
       handmadeDaysMin: product.handmadeDaysMin,
       handmadeDaysMax: product.handmadeDaysMax,
       customization,
+    });
+    void trackAnalyticsEvent("ADD_TO_CART", {
+      productId: product.id,
+      metadata: {
+        quantity,
+        unitPrice: product.price,
+      },
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 2200);

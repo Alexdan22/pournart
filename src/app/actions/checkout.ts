@@ -176,6 +176,16 @@ export async function createOrderAction(
     },
   });
 
+  await prisma.analyticsEvent.create({
+    data: {
+      event: "ORDER_CREATED",
+      sessionId: String(formData.get("analyticsSessionId") || "") || null,
+      userId: session.id,
+      orderId: order.id,
+      metadata: JSON.stringify({ total, subtotal, itemCount: orderItems.length }),
+    },
+  });
+
   if (isRazorpayConfigured()) {
     const razorpay = getRazorpayClient();
 
@@ -233,6 +243,15 @@ export async function markLocalPaymentPaidAction(formData: FormData) {
           actor: "SYSTEM",
         },
       },
+    },
+  });
+
+  await prisma.analyticsEvent.create({
+    data: {
+      event: "ORDER_PAID",
+      userId: session.id,
+      orderId: updatedOrder.id,
+      metadata: JSON.stringify({ total: updatedOrder.total, source: "local" }),
     },
   });
 

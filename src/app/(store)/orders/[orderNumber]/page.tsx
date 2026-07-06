@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ExternalLink, PackageCheck } from "lucide-react";
+import { ReviewForm } from "@/components/review-form";
 import {
   customerJourneyStatuses,
   getOrderStatusLabel,
@@ -38,6 +39,7 @@ export default async function OrderDetailPage(props: PageProps<"/orders/[orderNu
       items: true,
       timeline: { orderBy: { createdAt: "asc" } },
       user: true,
+      reviews: true,
     },
   });
 
@@ -49,6 +51,7 @@ export default async function OrderDetailPage(props: PageProps<"/orders/[orderNu
   const currentIndex = normalizedStatus
     ? (customerJourneyStatuses as readonly string[]).indexOf(normalizedStatus)
     : -1;
+  const reviewByOrderItem = new Map(order.reviews.map((review) => [review.orderItemId, review]));
 
   return (
     <section className="order-detail">
@@ -100,11 +103,18 @@ export default async function OrderDetailPage(props: PageProps<"/orders/[orderNu
               <div>
                 <strong>{displayName}</strong>
                 <span>
-                  {item.quantity} x {formatINR(item.unitPrice)}
-                </span>
-                <small>{item.customization !== "{}" ? item.customization : "Standard customization notes"}</small>
-              </div>
-            </article>
+                {item.quantity} x {formatINR(item.unitPrice)}
+              </span>
+              <small>{item.customization !== "{}" ? item.customization : "Standard customization notes"}</small>
+              {normalizedStatus === "DELIVERED" && item.productId ? (
+                reviewByOrderItem.has(item.id) ? (
+                  <small>Your review is {reviewByOrderItem.get(item.id)?.status.toLowerCase()}.</small>
+                ) : (
+                  <ReviewForm orderId={order.id} orderItemId={item.id} productId={item.productId} />
+                )
+              ) : null}
+            </div>
+          </article>
           );
         })}
       </section>

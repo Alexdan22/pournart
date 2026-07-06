@@ -59,6 +59,15 @@ export async function POST(request: Request) {
     },
   });
 
+  await prisma.analyticsEvent.create({
+    data: {
+      event: "ORDER_PAID",
+      userId: updatedOrder.userId,
+      orderId: updatedOrder.id,
+      metadata: JSON.stringify({ total: updatedOrder.total, source: "razorpay_verify" }),
+    },
+  });
+
   await dispatchEmailEvent("PAYMENT_CONFIRMED", { orderId: updatedOrder.id });
 
   return NextResponse.json({

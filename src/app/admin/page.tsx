@@ -1,636 +1,211 @@
-import Image from "next/image";
-import { AlertCircle, Eye, ImageIcon, Trash2, UploadCloud } from "lucide-react";
+import Link from "next/link";
 import {
-  createCategoryAction,
-  createCouponAction,
-  createProductAction,
-  deleteProductPhotoAction,
-  removeProductAction,
-  updateBannerAction,
-  updateCategoryAction,
-  updateOrderAction,
-  updateProductAction,
-} from "@/app/actions/admin";
-import {
-  ORDER_STATUSES,
-  PAYMENT_STATUSES,
-  actionRequiredOrderStatuses,
-  adminOrderQueues,
-  adminOrderStatusLabel,
-  getAdminOrderQueueKey,
-  getAdminOrderStatusLabel,
-  normalizeOrderStatus,
-  paymentStatusLabel,
-} from "@/lib/constants";
+  AlertTriangle,
+  ArrowRight,
+  MailWarning,
+  PackageCheck,
+  ReceiptText,
+  ShoppingBag,
+  Truck,
+  UserRound,
+} from "lucide-react";
+import { monthRange, reservedInventoryByProduct, todayRange } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 import { formatINR } from "@/lib/money";
-import { requireAdmin } from "@/lib/session";
-import type { CustomizationField } from "@/lib/types";
 
-const defaultProductImage = "/assets/resin-hero.png";
-const actionRequiredOrderStatusSet = new Set<string>(actionRequiredOrderStatuses);
-const defaultCustomizationFields: CustomizationField[] = [
-  { name: "size", label: "Preferred size", type: "text", placeholder: "Example: 6 inch / 8 inch" },
-  { name: "colors", label: "Preferred colors", type: "text", placeholder: "Example: teal, gold, white" },
-  { name: "personalization", label: "Name/date/text", type: "text", placeholder: "Exact text if needed" },
-  { name: "notes", label: "Customization notes", type: "textarea", placeholder: "Flowers, shells, finish, theme" },
-];
-
-function rupees(amountInPaise: number | null) {
-  return amountInPaise ? amountInPaise / 100 : "";
+function statCard(title: string, value: string | number, href: string, tone = "neutral") {
+  return (
+    <Link className={`admin-metric-card tone-${tone}`} href={href}>
+      <span>{title}</span>
+      <strong>{value}</strong>
+      <ArrowRight aria-hidden size={15} />
+    </Link>
+  );
 }
 
-function productFields(product?: {
-  id?: string;
-  name?: string;
-  slug?: string;
-  categoryId?: string;
-  description?: string;
-  story?: string;
-  price?: number;
-  compareAtPrice?: number | null;
-  imageUrl?: string;
-  inventory?: number;
-  isFeatured?: boolean;
-  isActive?: boolean;
-  handmadeDaysMin?: number;
-  handmadeDaysMax?: number;
-  customizationFields?: string;
-}) {
-  return {
-    name: product?.name ?? "",
-    slug: product?.slug ?? "",
-    categoryId: product?.categoryId ?? "",
-    description: product?.description ?? "",
-    story: product?.story ?? "",
-    price: rupees(product?.price ?? null),
-    compareAtPrice: rupees(product?.compareAtPrice ?? null),
-    imageUrl: product?.imageUrl ?? defaultProductImage,
-    inventory: product?.inventory ?? 0,
-    isFeatured: product?.isFeatured ?? false,
-    isActive: product?.isActive ?? true,
-    handmadeDaysMin: product?.handmadeDaysMin ?? 5,
-    handmadeDaysMax: product?.handmadeDaysMax ?? 12,
-    customizationFields: product?.customizationFields ?? "",
-  };
-}
-
-function parseAdminCustomizationFields(value?: string) {
-  if (!value) {
-    return defaultCustomizationFields;
-  }
-
-  try {
-    const fields = JSON.parse(value) as CustomizationField[];
-
-    return Array.isArray(fields) && fields.length ? fields : defaultCustomizationFields;
-  } catch {
-    return defaultCustomizationFields;
-  }
-}
-
-function customizationRows(value?: string) {
-  const rows: CustomizationField[] = [...parseAdminCustomizationFields(value)];
-
-  while (rows.length < 5) {
-    rows.push({ name: "", label: "", type: "text", placeholder: "" });
-  }
-
-  return rows;
-}
-
-function needsWorkflowAction(status: string) {
-  const normalizedStatus = normalizeOrderStatus(status);
-
-  return normalizedStatus ? actionRequiredOrderStatusSet.has(normalizedStatus) : true;
-}
-
-export default async function AdminPage() {
-  await requireAdmin();
-
-  const orderInclude = { user: true, items: true } as const;
-  const [products, categories, orders, users, coupons, banner] = await Promise.all([
-    prisma.product.findMany({
-      include: { category: true },
-      orderBy: { updatedAt: "desc" },
+export default async function AdminDashboardPage() {
+  const today = todayRange();
+  const month = monthRange();
+  const [
+    todaysOrders,
+    pendingOrders,
+    craftingOrders,
+    readyOrders,
+    deliveredToday,
+    revenueToday,
+    revenueMonth,
+    pendingPayments,
+    failedEmails,
+    recentCustomers,
+    recentActivity,
+    recentEnquiries,
+    products,
+  ] = await Promise.all([
+    prisma.order.count({ where: { createdAt: { gte: today.start, lt: today.end } } }),
+    prisma.order.count({ where: { status: { in: ["ORDER_RECEIVED", "PAYMENT_CONFIRMED", "DESIGN_REVIEW"] } } }),
+    prisma.order.count({ where: { status: "CRAFTING" } }),
+    prisma.order.count({ where: { status: { in: ["PACKED", "READY_FOR_PICKUP"] } } }),
+    prisma.order.count({ where: { deliveredAt: { gte: today.start, lt: today.end } } }),
+    prisma.order.aggregate({
+      where: { paymentStatus: "PAID", createdAt: { gte: today.start, lt: today.end } },
+      _sum: { total: true },
     }),
-    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
-    prisma.order.findMany({
-      include: orderInclude,
+    prisma.order.aggregate({
+      where: { paymentStatus: "PAID", createdAt: { gte: month.start, lt: month.end } },
+      _sum: { total: true },
+    }),
+    prisma.order.count({ where: { paymentStatus: { in: ["PENDING", "FAILED"] } } }),
+    prisma.emailQueue.count({ where: { status: "FAILED" } }),
+    prisma.user.findMany({
+      where: { role: { not: "ADMIN" } },
       orderBy: { createdAt: "desc" },
+      take: 5,
     }),
-    prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 25 }),
-    prisma.coupon.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.banner.findFirst({ where: { id: "home-hero" } }),
+    prisma.orderTimeline.findMany({
+      include: { order: { select: { orderNumber: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
+    prisma.contactEnquiry.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
+    prisma.product.findMany({
+      where: { adminStatus: { not: "ARCHIVED" } },
+      include: { category: true },
+      orderBy: { inventory: "asc" },
+      take: 80,
+    }),
   ]);
-  const orderQueues = adminOrderQueues.map((queue) => ({
-    ...queue,
-    orders: orders.filter((order) => getAdminOrderQueueKey(order.status) === queue.key),
-  }));
-
-  const paidRevenue = orders
-    .filter((order) => order.paymentStatus === "PAID")
-    .reduce((total, order) => total + order.total, 0);
-  const pendingOrders = orders.filter((order) => {
-    const status = normalizeOrderStatus(order.status);
-
-    return status !== "DELIVERED" && status !== "CANCELLED";
-  }).length;
+  const reserved = await reservedInventoryByProduct(products.map((product) => product.id));
+  const lowInventory = products.filter((product) => product.inventory - (reserved.get(product.id) ?? 0) <= product.lowStockThreshold);
 
   return (
-    <section className="admin-page">
-      <div className="section-heading">
-        <span className="panel-label">Admin dashboard</span>
-        <h1>Pour n Art operations</h1>
-        <p>Manage handmade catalog data, custom gift orders, workflow statuses, coupons, and homepage content.</p>
-      </div>
-
-      <div className="admin-stats">
+    <section className="admin-dashboard">
+      <div className="admin-page-heading">
         <div>
-          <span>Paid revenue</span>
-          <strong>{formatINR(paidRevenue)}</strong>
+          <span>Today</span>
+          <h1>What needs attention?</h1>
         </div>
-        <div>
-          <span>Open orders</span>
-          <strong>{pendingOrders}</strong>
-        </div>
-        <div>
-          <span>Products</span>
-          <strong>{products.length}</strong>
-        </div>
-        <div>
-          <span>Customers</span>
-          <strong>{users.filter((user) => user.role !== "ADMIN").length}</strong>
+        <div className="admin-heading-actions">
+          <Link className="admin-button primary" href="/admin/orders">
+            <ShoppingBag aria-hidden size={16} /> Orders
+          </Link>
+          <Link className="admin-button" href="/admin/products">
+            <ReceiptText aria-hidden size={16} /> Products
+          </Link>
         </div>
       </div>
 
-      <section className="admin-section">
-        <div className="admin-section-heading">
-          <h2>Homepage banner</h2>
-          <span>Update the first viewport signal.</span>
-        </div>
-        <form className="admin-form" action={updateBannerAction}>
-          <input type="hidden" name="id" value={banner?.id ?? "home-hero"} />
-          <label>
-            <span>Title</span>
-            <input name="title" defaultValue={banner?.title ?? "Handcrafted gifts made for moments that matter."} />
-          </label>
-          <label>
-            <span>Subtitle</span>
-            <textarea
-              name="subtitle"
-              defaultValue={
-                banner?.subtitle ??
-                "Personalized resin gifts, statement decor, and thoughtful pieces inspired by memories, nature, and the ocean."
-              }
-            />
-          </label>
-          <div className="form-grid">
-            <label>
-              <span>CTA label</span>
-              <input name="ctaLabel" defaultValue={banner?.ctaLabel ?? "Explore Collections"} />
-            </label>
-            <label>
-              <span>CTA link</span>
-              <input name="ctaHref" defaultValue={banner?.ctaHref ?? "/products"} />
-            </label>
-            <label>
-              <span>Image path</span>
-              <input name="imageUrl" defaultValue={banner?.imageUrl ?? "/assets/resin-hero.png"} />
-            </label>
+      <div className="admin-metric-grid">
+        {statCard("Today's Orders", todaysOrders, "/admin/orders?status=today")}
+        {statCard("Pending Orders", pendingOrders, "/admin/orders?status=pending", pendingOrders ? "warning" : "neutral")}
+        {statCard("Orders in Production", craftingOrders, "/admin/orders?status=CRAFTING")}
+        {statCard("Ready to Ship", readyOrders, "/admin/orders?status=PACKED")}
+        {statCard("Delivered Today", deliveredToday, "/admin/orders?status=DELIVERED")}
+        {statCard("Revenue Today", formatINR(revenueToday._sum.total ?? 0), "/admin/analytics")}
+        {statCard("Revenue This Month", formatINR(revenueMonth._sum.total ?? 0), "/admin/analytics")}
+        {statCard("Pending Payments", pendingPayments, "/admin/orders?payment=PENDING", pendingPayments ? "danger" : "neutral")}
+        {statCard("Low Inventory", lowInventory.length, "/admin/inventory", lowInventory.length ? "warning" : "neutral")}
+        {statCard("Failed Emails", failedEmails, "/admin/email-queue?status=FAILED", failedEmails ? "danger" : "neutral")}
+      </div>
+
+      <div className="admin-dashboard-grid">
+        <section className="admin-panel">
+          <div className="admin-panel-heading">
+            <h2>Low Inventory</h2>
+            <Link href="/admin/inventory">Open</Link>
           </div>
-          <label className="check-row">
-            <input type="checkbox" name="isActive" defaultChecked={banner?.isActive ?? true} />
-            <span>Active</span>
-          </label>
-          <button className="primary-button" type="submit">
-            Save banner
-          </button>
-        </form>
-      </section>
+          <div className="admin-compact-list">
+            {lowInventory.slice(0, 8).map((product) => {
+              const available = product.inventory - (reserved.get(product.id) ?? 0);
 
-      <section className="admin-section">
-        <div className="admin-section-heading">
-          <h2>Products</h2>
-          <span>Add, edit, or remove handmade items.</span>
-        </div>
-
-        <details className="admin-create" open>
-          <summary>Add product</summary>
-          <ProductForm categories={categories} action={createProductAction} />
-        </details>
-
-        <div className="admin-list">
-          {products.map((product) => (
-            <details className="admin-item" key={product.id}>
-              <summary>
-                <Image src={product.imageUrl} alt={product.name} width={56} height={56} />
-                <span>
-                  <strong>{product.name}</strong>
-                  <small>
-                    {product.category.name} · {formatINR(product.price)} · {product.isActive ? "Active" : "Inactive"}
-                  </small>
-                </span>
-              </summary>
-              <ProductForm product={product} categories={categories} action={updateProductAction} />
-              <form action={removeProductAction}>
-                <input type="hidden" name="id" value={product.id} />
-                <button className="danger-button" type="submit">
-                  Remove from storefront
-                </button>
-              </form>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section className="admin-section">
-        <div className="admin-section-heading">
-          <h2>Categories</h2>
-          <span>Configure category-based shipping and storefront filters.</span>
-        </div>
-        <details className="admin-create">
-          <summary>Add category</summary>
-          <CategoryForm action={createCategoryAction} />
-        </details>
-        <div className="admin-list">
-          {categories.map((category) => (
-            <details className="admin-item" key={category.id}>
-              <summary>
-                <span>
-                  <strong>{category.name}</strong>
-                  <small>
-                    {formatINR(category.shippingFee)} shipping · {category.isActive ? "Active" : "Inactive"}
-                  </small>
-                </span>
-              </summary>
-              <CategoryForm category={category} action={updateCategoryAction} />
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section className="admin-section">
-        <div className="admin-section-heading">
-          <h2>Orders</h2>
-          <span>Move each custom gift through the practical workflow queues.</span>
-        </div>
-        <div className="admin-queue-list">
-          {orderQueues.map((queue) => (
-            <section className="admin-order-queue" key={queue.key}>
-              <div className="admin-queue-heading">
-                <h3>{queue.label}</h3>
-                <span>{queue.orders.length} {queue.orders.length === 1 ? "order" : "orders"}</span>
-              </div>
-              <div className="admin-list">
-                {queue.orders.length > 0 ? (
-                  queue.orders.map((order) => {
-                    const actionNeeded = needsWorkflowAction(order.status);
-                    const selectedStatus = normalizeOrderStatus(order.status) ?? "ORDER_RECEIVED";
-
-            return (
-            <details className={`admin-item ${actionNeeded ? "admin-item-action" : ""}`} key={order.id}>
-              <summary>
-                <span>
-                  <strong>{order.orderNumber}</strong>
-                  <small>
-                    {order.user.name} · {formatINR(order.total)} ·{" "}
-                    {getAdminOrderStatusLabel(order.status)}
-                  </small>
-                </span>
-                {actionNeeded ? (
-                  <em className="action-chip">
-                    <AlertCircle aria-hidden size={14} /> Action needed
-                  </em>
-                ) : null}
-              </summary>
-              <form className="admin-form" action={updateOrderAction}>
-                <input type="hidden" name="orderId" value={order.id} />
-                <div className="form-grid">
-                  <label>
-                    <span>Status</span>
-                    <select name="status" defaultValue={selectedStatus}>
-                      {ORDER_STATUSES.map((status) => (
-                        <option value={status} key={status}>
-                          {adminOrderStatusLabel[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Payment</span>
-                    <select name="paymentStatus" defaultValue={order.paymentStatus}>
-                      {PAYMENT_STATUSES.map((status) => (
-                        <option value={status} key={status}>
-                          {paymentStatusLabel[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Courier / pickup partner</span>
-                    <input name="courierName" defaultValue={order.courierName ?? ""} />
-                  </label>
-                  <label>
-                    <span>Reference ID</span>
-                    <input name="courierTrackingId" defaultValue={order.courierTrackingId ?? ""} />
-                  </label>
-                  <label>
-                    <span>Status URL</span>
-                    <input name="courierTrackingUrl" defaultValue={order.courierTrackingUrl ?? ""} />
-                  </label>
-                </div>
-                <label>
-                  <span>Customer update note</span>
-                  <textarea name="note" placeholder="Short crafting journey update for email and the order timeline" />
-                </label>
-                <button className="primary-button" type="submit">
-                  Update order
-                </button>
-              </form>
-            </details>
-                    );
-                  })
-                ) : (
-                  <p className="queue-empty">No orders in this queue.</p>
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
-      </section>
-
-      <section className="admin-section">
-        <div className="admin-section-heading">
-          <h2>Coupons</h2>
-          <span>Launch offers and future promotions.</span>
-        </div>
-        <form className="admin-form" action={createCouponAction}>
-          <div className="form-grid">
-            <label>
-              <span>Code</span>
-              <input name="code" placeholder="HANDMADE10" />
-            </label>
-            <label>
-              <span>Type</span>
-              <select name="type" defaultValue="PERCENT">
-                <option value="PERCENT">Percent</option>
-                <option value="FIXED">Fixed</option>
-              </select>
-            </label>
-            <label>
-              <span>Value</span>
-              <input name="value" type="number" />
-            </label>
-            <label>
-              <span>Minimum subtotal</span>
-              <input name="minSubtotal" type="number" />
-            </label>
-            <label>
-              <span>Usage limit</span>
-              <input name="usageLimit" type="number" />
-            </label>
+              return (
+                <Link href="/admin/inventory" key={product.id}>
+                  <AlertTriangle aria-hidden size={16} />
+                  <span>
+                    <strong>{product.name}</strong>
+                    <small>{product.category.name} / {available} available</small>
+                  </span>
+                </Link>
+              );
+            })}
+            {lowInventory.length === 0 ? <p>No inventory alerts.</p> : null}
           </div>
-          <label>
-            <span>Description</span>
-            <input name="description" />
-          </label>
-          <label className="check-row">
-            <input type="checkbox" name="isActive" defaultChecked />
-            <span>Active</span>
-          </label>
-          <button className="primary-button" type="submit">
-            Add coupon
-          </button>
-        </form>
-        <div className="coupon-row">
-          {coupons.map((coupon) => (
-            <span key={coupon.id}>
-              {coupon.code} · {coupon.type === "PERCENT" ? `${coupon.value}%` : formatINR(coupon.value)}
-            </span>
-          ))}
-        </div>
-      </section>
+        </section>
 
-      <section className="admin-section">
-        <div className="admin-section-heading">
-          <h2>Customers</h2>
-          <span>Recent accounts and admin readiness.</span>
+        <section className="admin-panel">
+          <div className="admin-panel-heading">
+            <h2>Recent Customers</h2>
+            <Link href="/admin/customers">Open</Link>
+          </div>
+          <div className="admin-compact-list">
+            {recentCustomers.map((customer) => (
+              <Link href={`/admin/customers/${customer.id}`} key={customer.id}>
+                <UserRound aria-hidden size={16} />
+                <span>
+                  <strong>{customer.name}</strong>
+                  <small>{customer.email}</small>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="admin-panel">
+          <div className="admin-panel-heading">
+            <h2>Recent Activity</h2>
+            <Link href="/admin/orders">Orders</Link>
+          </div>
+          <div className="admin-compact-list">
+            {recentActivity.map((activity) => (
+              <Link href={`/admin/orders/${activity.order.orderNumber}`} key={activity.id}>
+                <PackageCheck aria-hidden size={16} />
+                <span>
+                  <strong>{activity.title}</strong>
+                  <small>{activity.order.orderNumber} / {activity.createdAt.toLocaleString("en-IN")}</small>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="admin-panel">
+          <div className="admin-panel-heading">
+            <h2>Recent Contact Enquiries</h2>
+            <Link href="/admin/contact-enquiries">Open</Link>
+          </div>
+          <div className="admin-compact-list">
+            {recentEnquiries.map((enquiry) => (
+              <Link href="/admin/contact-enquiries" key={enquiry.id}>
+                <MailWarning aria-hidden size={16} />
+                <span>
+                  <strong>{enquiry.name}</strong>
+                  <small>{enquiry.productType} / {enquiry.status}</small>
+                </span>
+              </Link>
+            ))}
+            {recentEnquiries.length === 0 ? <p>No enquiries yet.</p> : null}
+          </div>
+        </section>
+      </div>
+
+      <section className="admin-panel quick-actions-panel">
+        <div className="admin-panel-heading">
+          <h2>Quick Actions</h2>
         </div>
-        <div className="customer-table">
-          {users.map((user) => (
-            <div key={user.id}>
-              <strong>{user.name}</strong>
-              <span>{user.email}</span>
-              <small>{user.role}</small>
-            </div>
-          ))}
+        <div className="admin-quick-actions">
+          <Link href="/admin/orders?status=ORDER_RECEIVED">
+            <ShoppingBag aria-hidden size={17} /> Review new orders
+          </Link>
+          <Link href="/admin/orders?status=PACKED">
+            <Truck aria-hidden size={17} /> Ship packed orders
+          </Link>
+          <Link href="/admin/email-queue?status=FAILED">
+            <MailWarning aria-hidden size={17} /> Fix failed emails
+          </Link>
+          <Link href="/admin/inventory">
+            <AlertTriangle aria-hidden size={17} /> Restock attention items
+          </Link>
         </div>
       </section>
     </section>
-  );
-}
-
-function ProductForm({
-  product,
-  categories,
-  action,
-}: {
-  product?: Parameters<typeof productFields>[0];
-  categories: { id: string; name: string }[];
-  action: (formData: FormData) => Promise<void>;
-}) {
-  const values = productFields(product);
-  const rows = customizationRows(values.customizationFields);
-  const canDeletePhoto = Boolean(product?.id && values.imageUrl !== defaultProductImage);
-
-  return (
-    <form className="admin-form product-admin-form" action={action}>
-      {product?.id ? <input type="hidden" name="id" value={product.id} /> : null}
-      <input type="hidden" name="imageUrl" value={values.imageUrl} />
-      <input type="hidden" name="currentImageUrl" value={values.imageUrl} />
-
-      <div className="admin-form-panel">
-        <h3>Basics</h3>
-        <div className="form-grid">
-          <label>
-            <span>Name</span>
-            <input name="name" defaultValue={values.name} required />
-          </label>
-          <label>
-            <span>Slug</span>
-            <input name="slug" defaultValue={values.slug} />
-          </label>
-          <label>
-            <span>Category</span>
-            <select name="categoryId" defaultValue={values.categoryId} required>
-              <option value="">Choose category</option>
-              {categories.map((category) => (
-                <option value={category.id} key={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Price</span>
-            <input name="price" type="number" step="0.01" defaultValue={values.price} required />
-          </label>
-          <label>
-            <span>Compare price</span>
-            <input name="compareAtPrice" type="number" step="0.01" defaultValue={values.compareAtPrice} />
-          </label>
-          <label>
-            <span>Inventory</span>
-            <input name="inventory" type="number" defaultValue={values.inventory} />
-          </label>
-          <label>
-            <span>Min days</span>
-            <input name="handmadeDaysMin" type="number" defaultValue={values.handmadeDaysMin} />
-          </label>
-          <label>
-            <span>Max days</span>
-            <input name="handmadeDaysMax" type="number" defaultValue={values.handmadeDaysMax} />
-          </label>
-        </div>
-      </div>
-
-      <div className="admin-form-panel photo-manager">
-        <div className="photo-preview">
-          <Image src={values.imageUrl} alt={values.name || "Product photo"} width={220} height={220} />
-        </div>
-        <div className="photo-controls">
-          <h3>
-            <ImageIcon aria-hidden size={18} /> Product photo
-          </h3>
-          <a className="text-link" href={values.imageUrl} target="_blank" rel="noreferrer">
-            <Eye aria-hidden size={16} /> View current photo
-          </a>
-          <label className="file-upload-field">
-            <span>
-              <UploadCloud aria-hidden size={16} /> Upload new photo
-            </span>
-            <input name="imageFile" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-          <small>JPG, PNG, or WebP up to 8MB. Saving the product applies the upload.</small>
-          {product?.id ? (
-            <button className="danger-button" type="submit" formAction={deleteProductPhotoAction} disabled={!canDeletePhoto}>
-              <Trash2 aria-hidden size={16} /> Delete photo
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="admin-form-panel">
-        <h3>Description</h3>
-        <label>
-          <span>Short description</span>
-          <textarea name="description" defaultValue={values.description} />
-        </label>
-        <label>
-          <span>Story</span>
-          <textarea name="story" defaultValue={values.story} />
-        </label>
-      </div>
-
-      <details className="admin-form-panel custom-fields-builder">
-        <summary>Customization questions</summary>
-        <p>These fields appear on the product page before a customer adds the item to cart.</p>
-        <div className="custom-field-list">
-          {rows.map((field, index) => (
-            <div className="custom-field-row" key={`${field.name || "new"}-${index}`}>
-              <input type="hidden" name="customFieldName" value={field.name} />
-              <label>
-                <span>Question label</span>
-                <input name="customFieldLabel" defaultValue={field.label} placeholder="Example: Preferred colors" />
-              </label>
-              <label>
-                <span>Answer type</span>
-                <select name="customFieldType" defaultValue={field.type === "textarea" ? "textarea" : "text"}>
-                  <option value="text">Short text</option>
-                  <option value="textarea">Long note</option>
-                </select>
-              </label>
-              <label>
-                <span>Placeholder</span>
-                <input name="customFieldPlaceholder" defaultValue={field.placeholder ?? ""} placeholder="Example answer" />
-              </label>
-            </div>
-          ))}
-        </div>
-      </details>
-
-      <div className="admin-form-panel product-flags">
-        <div className="check-grid">
-          <label className="check-row">
-            <input type="checkbox" name="isFeatured" defaultChecked={values.isFeatured} />
-            <span>Featured</span>
-          </label>
-          <label className="check-row">
-            <input type="checkbox" name="isActive" defaultChecked={values.isActive} />
-            <span>Active</span>
-          </label>
-        </div>
-      </div>
-      <button className="primary-button" type="submit">
-        Save product
-      </button>
-    </form>
-  );
-}
-
-function CategoryForm({
-  category,
-  action,
-}: {
-  category?: {
-    id?: string;
-    name?: string;
-    slug?: string;
-    description?: string;
-    imageUrl?: string | null;
-    shippingFee?: number;
-    sortOrder?: number;
-    isActive?: boolean;
-  };
-  action: (formData: FormData) => Promise<void>;
-}) {
-  return (
-    <form className="admin-form" action={action}>
-      {category?.id ? <input type="hidden" name="id" value={category.id} /> : null}
-      <div className="form-grid">
-        <label>
-          <span>Name</span>
-          <input name="name" defaultValue={category?.name ?? ""} required />
-        </label>
-        <label>
-          <span>Slug</span>
-          <input name="slug" defaultValue={category?.slug ?? ""} />
-        </label>
-        <label>
-          <span>Shipping fee</span>
-          <input name="shippingFee" type="number" step="0.01" defaultValue={rupees(category?.shippingFee ?? null)} />
-        </label>
-        <label>
-          <span>Sort order</span>
-          <input name="sortOrder" type="number" defaultValue={category?.sortOrder ?? 0} />
-        </label>
-      </div>
-      <label>
-        <span>Description</span>
-        <textarea name="description" defaultValue={category?.description ?? ""} />
-      </label>
-      <label>
-        <span>Image path</span>
-        <input name="imageUrl" defaultValue={category?.imageUrl ?? "/assets/resin-hero.png"} />
-      </label>
-      <label className="check-row">
-        <input type="checkbox" name="isActive" defaultChecked={category?.isActive ?? true} />
-        <span>Active</span>
-      </label>
-      <button className="primary-button" type="submit">
-        Save category
-      </button>
-    </form>
   );
 }

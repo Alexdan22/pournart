@@ -20,6 +20,13 @@ model User {
   addresses    Address[]
   orders       Order[]
   wishlist     WishlistItem[]
+  reviews      Review[]
+  internalNotes InternalNote[]
+  notesAuthored InternalNote[] @relation("InternalNoteAuthor")
+  inventoryAdjustments InventoryAdjustment[]
+  analyticsEvents AnalyticsEvent[]
+  emailQueue   EmailQueue[]
+  emailLogs    EmailLog[]
 }
 
 model Address {
@@ -44,6 +51,9 @@ model Category {
   imageUrl    String?
   shippingFee Int       @default(0)
   isActive    Boolean   @default(true)
+  isFeatured  Boolean   @default(false)
+  metaTitle   String?
+  metaDescription String?
   sortOrder   Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -61,6 +71,9 @@ model Product {
   compareAtPrice      Int?
   imageUrl            String
   inventory           Int         @default(0)
+  lowStockThreshold   Int         @default(3)
+  adminStatus         String      @default("PUBLISHED")
+  archivedAt          DateTime?
   isFeatured          Boolean     @default(false)
   isActive            Boolean     @default(true)
   handmadeDaysMin     Int         @default(5)
@@ -71,6 +84,9 @@ model Product {
   category            Category    @relation(fields: [categoryId], references: [id])
   orderItems          OrderItem[]
   wishlistItems       WishlistItem[]
+  reviews             Review[]
+  inventoryAdjustments InventoryAdjustment[]
+  analyticsEvents     AnalyticsEvent[]
 }
 
 model WishlistItem {
@@ -133,6 +149,11 @@ model Order {
   user               User            @relation(fields: [userId], references: [id])
   items              OrderItem[]
   timeline           OrderTimeline[]
+  internalNotes      InternalNote[]
+  emailQueue         EmailQueue[]
+  emailLogs          EmailLog[]
+  reviews            Review[]
+  analyticsEvents    AnalyticsEvent[]
 }
 
 model OrderItem {
@@ -146,6 +167,7 @@ model OrderItem {
   customization   String  @default("{}")
   order           Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  reviews         Review[]
 }
 
 model OrderTimeline {
@@ -174,6 +196,9 @@ model Banner {
 
 model EmailQueue {
   id          String    @id @default(cuid())
+  orderId     String?
+  userId      String?
+  contactEnquiryId String?
   event       String
   recipient   String
   subject     String
@@ -188,15 +213,23 @@ model EmailQueue {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   logs        EmailLog[]
+  order       Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  contactEnquiry ContactEnquiry? @relation(fields: [contactEnquiryId], references: [id], onDelete: SetNull)
 
   @@index([status, scheduledAt])
   @@index([event])
   @@index([recipient])
+  @@index([orderId])
+  @@index([userId])
+  @@index([contactEnquiryId])
 }
 
 model EmailLog {
   id           String     @id @default(cuid())
   queueId      String?
+  orderId      String?
+  userId       String?
   event        String
   recipient    String
   subject      String
@@ -205,9 +238,148 @@ model EmailLog {
   error        String?
   createdAt    DateTime   @default(now())
   queue        EmailQueue? @relation(fields: [queueId], references: [id], onDelete: SetNull)
+  order        Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([queueId])
+  @@index([orderId])
+  @@index([userId])
   @@index([event])
   @@index([status])
   @@index([createdAt])
+}
+
+model Review {
+  id          String     @id @default(cuid())
+  orderId     String?
+  orderItemId String?
+  productId   String
+  userId      String
+  rating      Int
+  title       String?
+  body        String
+  status      String     @default("PENDING")
+  isFeatured  Boolean    @default(false)
+  reply       String?
+  repliedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  order       Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItem   OrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orderItemId, userId])
+  @@index([productId, status])
+  @@index([userId])
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+model ContactEnquiry {
+  id               String     @id @default(cuid())
+  name             String
+  email            String?
+  phone            String
+  occasion         String
+  productType      String
+  budget           String
+  message          String
+  referenceFileUrl String?
+  status           String     @default("NEW")
+  source           String     @default("CONTACT_FORM")
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  internalNotes    InternalNote[]
+  emailQueue       EmailQueue[]
+
+  @@index([status, createdAt])
+  @@index([email])
+  @@index([phone])
+}
+
+model InternalNote {
+  id               String     @id @default(cuid())
+  targetType       String
+  targetId         String
+  orderId          String?
+  userId           String?
+  contactEnquiryId String?
+  reviewId         String?
+  authorId         String?
+  content          String
+  createdAt        DateTime   @default(now())
+  order            Order?     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user             User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactEnquiry   ContactEnquiry? @relation(fields: [contactEnquiryId], references: [id], onDelete: Cascade)
+  author           User?      @relation("InternalNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([orderId])
+  @@index([userId])
+  @@index([contactEnquiryId])
+  @@index([reviewId])
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  type       String
+  title      String
+  body       String
+  href       String?
+  severity   String    @default("INFO")
+  status     String    @default("UNREAD")
+  sourceType String?
+  sourceId   String?
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+
+  @@index([status, createdAt])
+  @@index([type])
+  @@unique([type, sourceType, sourceId])
+}
+
+model InventoryAdjustment {
+  id        String    @id @default(cuid())
+  productId String
+  delta     Int
+  reason    String
+  note      String?
+  actorId   String?
+  createdAt DateTime  @default(now())
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  actor     User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+}
+
+model StoreSetting {
+  key       String    @id
+  group     String
+  label     String
+  value     String
+  valueType String    @default("text")
+  updatedAt DateTime  @updatedAt
+
+  @@index([group])
+}
+
+model AnalyticsEvent {
+  id        String    @id @default(cuid())
+  event     String
+  sessionId String?
+  userId    String?
+  productId String?
+  orderId   String?
+  metadata  String    @default("{}")
+  createdAt DateTime  @default(now())
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product   Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  order     Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([event, createdAt])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([productId])
+  @@index([orderId])
 }

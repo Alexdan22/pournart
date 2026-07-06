@@ -198,6 +198,16 @@ function AdminNotification(data: TemplateData) {
   );
 }
 
+function CustomerMessage(data: TemplateData) {
+  return (
+    <EmailLayout title={data.adminTitle || "A note from Pour N Art"} {...data}>
+      <Paragraph>Hi {data.order?.customer.name || data.customerName || "there"},</Paragraph>
+      <Paragraph>{data.message || "The Pour N Art studio has shared an update."}</Paragraph>
+      {data.order ? <Button href={data.order.orderUrl}>View Order</Button> : null}
+    </EmailLayout>
+  );
+}
+
 function AbandonedCart(data: TemplateData) {
   return (
     <EmailLayout title="Your handcrafted picks are waiting" {...data}>
@@ -223,6 +233,7 @@ const templates: Record<EmailTemplateName, (data: TemplateData) => React.ReactEl
   ContactNotification,
   LowInventory,
   AdminNotification,
+  CustomerMessage,
   AbandonedCart,
 };
 

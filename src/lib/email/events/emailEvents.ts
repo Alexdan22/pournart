@@ -22,6 +22,7 @@ type EmailEventPayload = {
   userId?: string;
   orderId?: string;
   productId?: string;
+  contactEnquiryId?: string;
   note?: string;
   status?: OrderStatus;
   stage?: TemplateData["stage"];
@@ -78,6 +79,7 @@ function orderSummary(order: OrderWithEmailData, note?: string): EmailOrderSumma
     id: order.id,
     orderNumber: order.orderNumber,
     customer: {
+      id: order.user.id,
       email: order.user.email,
       name: order.user.name,
     },
@@ -160,6 +162,14 @@ async function getProduct(productId?: string) {
   return prisma.product.findUnique({ where: { id: productId } });
 }
 
+async function getContactEnquiry(contactEnquiryId?: string) {
+  if (!contactEnquiryId) {
+    return null;
+  }
+
+  return prisma.contactEnquiry.findUnique({ where: { id: contactEnquiryId } });
+}
+
 function adminEmail() {
   return getAdminEmail();
 }
@@ -194,10 +204,11 @@ async function enqueueAll(jobs: EmailJobInput[]) {
 
 export async function dispatchEmailEvent(event: EmailEventName, payload: EmailEventPayload = {}) {
   try {
-    const [order, user, product] = await Promise.all([
+    const [order, user, product, contactEnquiry] = await Promise.all([
       getOrder(payload.orderId, payload.note),
       getUser(payload.userId),
       getProduct(payload.productId),
+      getContactEnquiry(payload.contactEnquiryId),
     ]);
     const admin = adminEmail();
     const common = baseData();
@@ -385,11 +396,54 @@ export async function dispatchEmailEvent(event: EmailEventName, payload: EmailEv
       });
     }
 
-    // TODO: CONTACT_RECEIVED dispatch belongs in a future server-side contact form action.
+    if (event === "CONTACT_RECEIVED" && contactEnquiry) {
+      const contact = {
+        name: contactEnquiry.name,
+        email: contactEnquiry.email || "",
+        phone: contactEnquiry.phone,
+        message: [
+          `Occasion: ${contactEnquiry.occasion}`,
+          `Product type: ${contactEnquiry.productType}`,
+          `Budget: ${contactEnquiry.budget}`,
+          contactEnquiry.message,
+        ].join("\n"),
+      };
+
+      if (contactEnquiry.email) {
+        jobs.push({
+          event,
+          contactEnquiryId: contactEnquiry.id,
+          to: contactEnquiry.email,
+          subject: "We received your Pour N Art custom request",
+          template: "ContactConfirmation",
+          role: "studio",
+          data: { ...common, contact, preheader: "Your custom request has reached the studio." },
+        });
+      }
+
+      jobs.push({
+        event,
+        contactEnquiryId: contactEnquiry.id,
+        to: admin,
+        subject: `New custom request: ${contactEnquiry.name}`,
+        template: "ContactNotification",
+        role: "contact",
+        replyTo: contactEnquiry.email || undefined,
+        data: { ...common, contact, preheader: "A new custom order enquiry needs review." },
+      });
+    }
+
     // TODO: ABANDONED_CART dispatch belongs in a future persisted cart/session workflow.
     // TODO: REVIEW_REQUEST can be expanded when product reviews are modeled in the database.
 
-    await enqueueAll(jobs);
+    await enqueueAll(
+      jobs.map((job) => ({
+        ...job,
+        orderId: job.orderId ?? payload.orderId,
+        userId: job.userId ?? order?.customer.id ?? payload.userId,
+        contactEnquiryId: job.contactEnquiryId ?? payload.contactEnquiryId,
+      })),
+    );
   } catch (error) {
     console.error("[email:event-dispatch-failed]", event, error);
   }

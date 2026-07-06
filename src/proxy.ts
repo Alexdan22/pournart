@@ -6,8 +6,9 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.toLowerCase().split(":")[0] ?? "";
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const url = request.nextUrl.clone();
+  const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
   const shouldCanonicalizeHost = host === "www.pournart.in";
-  const shouldForceHttps = forwardedProto === "http";
+  const shouldForceHttps = !isLocalHost && forwardedProto === "http";
 
   if (shouldCanonicalizeHost || shouldForceHttps) {
     url.protocol = "https:";

@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { ArrowRight, CreditCard, MapPin, Plus, ShoppingBag } from "lucide-react";
 import { createOrderAction } from "@/app/actions/checkout";
 import { useCart } from "@/components/cart-provider";
+import { trackAnalyticsEvent } from "@/lib/analytics-client";
 import { formatINR } from "@/lib/money";
 import { warmDisplayCopy } from "@/lib/product-positioning";
 import type { ActionState } from "@/lib/types";
@@ -69,6 +70,17 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
     quantity: item.quantity,
     customization: item.customization,
   }));
+
+  useEffect(() => {
+    if (items.length > 0) {
+      void trackAnalyticsEvent("CHECKOUT_STARTED", {
+        metadata: {
+          itemCount: items.length,
+          subtotal,
+        },
+      });
+    }
+  }, [items.length, subtotal]);
 
   function updateDeliveryField(field: keyof DeliveryFields, value: string) {
     setDelivery((current) => ({ ...current, [field]: value }));

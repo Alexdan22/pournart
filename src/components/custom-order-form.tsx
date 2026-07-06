@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { MessageCircle } from "lucide-react";
-import { defaultWhatsAppMessage } from "@/lib/constants";
+import { createContactEnquiryAction } from "@/app/actions/contact";
 
-const budgetRanges = ["Under ₹1000", "₹1000-₹2500", "₹2500-₹5000", "₹5000+"];
+const budgetRanges = ["Under Rs 1000", "Rs 1000-Rs 2500", "Rs 2500-Rs 5000", "Rs 5000+"];
+const initialState: Awaited<ReturnType<typeof createContactEnquiryAction>> = {};
 
 type CustomOrderFormProps = {
   whatsappNumber?: string;
@@ -12,43 +13,34 @@ type CustomOrderFormProps = {
 
 export function CustomOrderForm({ whatsappNumber }: CustomOrderFormProps) {
   const [referenceFileName, setReferenceFileName] = useState("");
+  const [state, formAction, pending] = useActionState(createContactEnquiryAction, initialState);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-    const message = [
-      defaultWhatsAppMessage,
-      `Name: ${formData.get("name") || ""}`,
-      `Phone / WhatsApp: ${formData.get("phone") || ""}`,
-      `Occasion: ${formData.get("occasion") || ""}`,
-      `Product type: ${formData.get("productType") || ""}`,
-      `Preferred budget: ${formData.get("budget") || ""}`,
-      `Personalization details: ${formData.get("details") || ""}`,
-      referenceFileName ? `Reference image: ${referenceFileName} (to be shared separately)` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const href = whatsappNumber
-      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
-      : `mailto:pournart@gmail.com?subject=${encodeURIComponent("Custom Pour n Art order")}&body=${encodeURIComponent(message)}`;
-
-    window.location.href = href;
-  }
+  useEffect(() => {
+    if (state.redirectTo) {
+      window.location.href = state.redirectTo;
+    }
+  }, [state.redirectTo]);
 
   return (
-    <form className="custom-order-form" onSubmit={handleSubmit}>
+    <form className="custom-order-form" action={formAction}>
       <div className="form-grid two-column">
         <label>
           <span>Name</span>
           <input name="name" autoComplete="name" required />
+          {state.fieldErrors?.name ? <small>{state.fieldErrors.name[0]}</small> : null}
         </label>
         <label>
           <span>Phone / WhatsApp</span>
           <input name="phone" autoComplete="tel" required />
+          {state.fieldErrors?.phone ? <small>{state.fieldErrors.phone[0]}</small> : null}
         </label>
       </div>
+
+      <label>
+        <span>Email</span>
+        <input name="email" type="email" autoComplete="email" />
+        {state.fieldErrors?.email ? <small>{state.fieldErrors.email[0]}</small> : null}
+      </label>
 
       <div className="form-grid two-column">
         <label>
@@ -81,6 +73,7 @@ export function CustomOrderForm({ whatsappNumber }: CustomOrderFormProps) {
           placeholder="Names, dates, initials, flowers, shells, colors, memory, or gifting timeline"
           required
         />
+        {state.fieldErrors?.details ? <small>{state.fieldErrors.details[0]}</small> : null}
       </label>
 
       <div className="form-grid two-column">
@@ -89,9 +82,10 @@ export function CustomOrderForm({ whatsappNumber }: CustomOrderFormProps) {
           <input
             name="referenceImage"
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp,image/gif"
             onChange={(event) => setReferenceFileName(event.target.files?.[0]?.name ?? "")}
           />
+          {referenceFileName ? <small>{referenceFileName}</small> : null}
         </label>
         <label>
           <span>Preferred budget range</span>
@@ -103,9 +97,10 @@ export function CustomOrderForm({ whatsappNumber }: CustomOrderFormProps) {
         </label>
       </div>
 
-      <button className="primary-button" type="submit">
+      {state.message ? <p className="form-message">{state.message}</p> : null}
+      <button className="primary-button" disabled={pending} type="submit">
         <MessageCircle aria-hidden size={18} />
-        Request a Custom Order
+        {pending ? "Saving request..." : whatsappNumber ? "Save and Continue" : "Send Custom Request"}
       </button>
     </form>
   );
