@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { dispatchEmailEvent } from "@/lib/email";
 import { createSession, deleteSession } from "@/lib/session";
 import type { ActionState } from "@/lib/types";
 
@@ -83,6 +84,8 @@ export async function registerAction(_state: ActionState, formData: FormData): P
       passwordHash: await bcrypt.hash(parsed.data.password, 12),
     },
   });
+
+  await dispatchEmailEvent("USER_CREATED", { userId: user.id });
 
   await createSession({
     id: user.id,

@@ -5,10 +5,15 @@ import { mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
+import {
+  ORDER_STATUSES,
+  PAYMENT_STATUSES,
+  getDefaultOrderStatusNote,
+  getOrderStatusLabel,
+} from "@/lib/constants";
 import { prisma } from "@/lib/db";
+import { dispatchEmailEvent, eventForOrderStatus } from "@/lib/email";
 import { parseRupeesToPaise } from "@/lib/money";
-import { sendOrderNotification } from "@/lib/notifications";
 import { requireAdmin } from "@/lib/session";
 
 const defaultProductImage = "/assets/resin-hero.png";
@@ -192,7 +197,7 @@ export async function createProductAction(formData: FormData) {
   const customizationFields = customizationFieldsFromForm(formData);
   const imageUrl = await productImageFromForm(formData);
 
-  await prisma.product.create({
+  const product = await prisma.product.create({
     data: {
       categoryId: String(formData.get("categoryId") || ""),
       name,
@@ -212,6 +217,12 @@ export async function createProductAction(formData: FormData) {
       customizationFields,
     },
   });
+
+  if (product.inventory <= 0) {
+    await dispatchEmailEvent("PRODUCT_OUT_OF_STOCK", { productId: product.id });
+  } else if (product.inventory <= 3) {
+    await dispatchEmailEvent("LOW_INVENTORY", { productId: product.id });
+  }
 
   revalidatePath("/admin");
   revalidatePath("/products");
@@ -246,6 +257,12 @@ export async function updateProductAction(formData: FormData) {
       customizationFields,
     },
   });
+
+  if (product.inventory <= 0) {
+    await dispatchEmailEvent("PRODUCT_OUT_OF_STOCK", { productId: product.id });
+  } else if (product.inventory <= 3) {
+    await dispatchEmailEvent("LOW_INVENTORY", { productId: product.id });
+  }
 
   revalidatePath("/admin");
   revalidatePath("/products");
@@ -288,7 +305,7 @@ export async function updateOrderAction(formData: FormData) {
   const status = z.enum(ORDER_STATUSES).parse(formData.get("status"));
   const paymentStatus = z.enum(PAYMENT_STATUSES).parse(formData.get("paymentStatus"));
   const orderId = String(formData.get("orderId") || "");
-  const note = String(formData.get("note") || `Order moved to ${status.toLowerCase().replaceAll("_", " ")}.`);
+  const note = String(formData.get("note") || getDefaultOrderStatusNote(status));
   const courierTrackingUrl = String(formData.get("courierTrackingUrl") || "");
 
   const order = await prisma.order.update({
@@ -304,7 +321,7 @@ export async function updateOrderAction(formData: FormData) {
       timeline: {
         create: {
           status,
-          title: status.toLowerCase().replaceAll("_", " "),
+          title: getOrderStatusLabel(status),
           note,
           actor: "ADMIN",
         },
@@ -312,7 +329,11 @@ export async function updateOrderAction(formData: FormData) {
     },
   });
 
-  await sendOrderNotification(status === "CANCELLED" ? "ORDER_CANCELLED" : "STATUS_UPDATED", order.id);
+  await dispatchEmailEvent(eventForOrderStatus(status), {
+    orderId: order.id,
+    note,
+    status,
+  });
   revalidatePath("/admin");
   revalidatePath(`/orders/${order.orderNumber}`);
 }

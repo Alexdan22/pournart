@@ -9,7 +9,7 @@ Full-stack ecommerce site for Pour n Art, a premium handmade resin art store.
 - Prisma + SQLite for local development
 - Custom cookie session auth
 - Razorpay Orders/Checkout verification routes
-- Nodemailer-ready notification layer
+- Resend-backed role-based email notification layer
 
 ## Local Setup
 
@@ -41,7 +41,7 @@ Copy `.env.example` to `.env` and fill production values:
 - `RAZORPAY_KEY_SECRET`
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
 - `RAZORPAY_WEBHOOK_SECRET`
-- SMTP settings and `ADMIN_EMAIL`
+- Resend settings: `RESEND_API_KEY`, role senders, and `EMAIL_ADMIN`
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`
 
 ## Useful Commands

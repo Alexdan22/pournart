@@ -120,7 +120,7 @@ export function PaymentClient({
     <section className="payment-panel">
       <span className="panel-label">Secure Razorpay checkout</span>
       <h1>{formatINR(amount)}</h1>
-      <p>Order {orderNumber} is ready for payment. After verification, tracking starts automatically.</p>
+      <p>Order {orderNumber} is ready for payment. After verification, your crafting journey updates automatically.</p>
       {error ? <p className="form-message">{error}</p> : null}
       <button className="primary-button" disabled={loading} type="button" onClick={payWithRazorpay}>
         {loading ? <Loader2 aria-hidden className="spin" size={18} /> : <CreditCard aria-hidden size={18} />}

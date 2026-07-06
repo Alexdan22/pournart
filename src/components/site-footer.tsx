@@ -15,11 +15,11 @@ export function SiteFooter() {
         <strong className="brand-name">
           Pour <em>n</em> Art
         </strong>
-        <p>Handmade resin gifting, customized in India and shipped across India.</p>
+        <p>Handcrafted custom gifts and signature decor inspired by memories, nature, and the ocean.</p>
       </div>
       <div className="footer-links">
-        <Link href="/products">Products</Link>
-        <Link href="/orders">Order tracking</Link>
+        <Link href="/products">Collections</Link>
+        <Link href="/orders">Crafting journey</Link>
         <a className="instagram-link" href="https://www.instagram.com/pour_n_art/" target="_blank" rel="noreferrer">
           <InstagramMark aria-hidden size={18} /> Instagram
         </a>

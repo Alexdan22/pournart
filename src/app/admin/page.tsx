@@ -14,8 +14,12 @@ import {
 import {
   ORDER_STATUSES,
   PAYMENT_STATUSES,
-  manualOrderStatuses,
-  orderStatusLabel,
+  actionRequiredOrderStatuses,
+  adminOrderQueues,
+  adminOrderStatusLabel,
+  getAdminOrderQueueKey,
+  getAdminOrderStatusLabel,
+  normalizeOrderStatus,
   paymentStatusLabel,
 } from "@/lib/constants";
 import { prisma } from "@/lib/db";
@@ -24,7 +28,7 @@ import { requireAdmin } from "@/lib/session";
 import type { CustomizationField } from "@/lib/types";
 
 const defaultProductImage = "/assets/resin-hero.png";
-const manualOrderStatusSet = new Set<string>(manualOrderStatuses);
+const actionRequiredOrderStatusSet = new Set<string>(actionRequiredOrderStatuses);
 const defaultCustomizationFields: CustomizationField[] = [
   { name: "size", label: "Preferred size", type: "text", placeholder: "Example: 6 inch / 8 inch" },
   { name: "colors", label: "Preferred colors", type: "text", placeholder: "Example: teal, gold, white" },
@@ -95,48 +99,50 @@ function customizationRows(value?: string) {
   return rows;
 }
 
-function needsManualAction(status: string) {
-  return manualOrderStatusSet.has(status);
+function needsWorkflowAction(status: string) {
+  const normalizedStatus = normalizeOrderStatus(status);
+
+  return normalizedStatus ? actionRequiredOrderStatusSet.has(normalizedStatus) : true;
 }
 
 export default async function AdminPage() {
   await requireAdmin();
 
   const orderInclude = { user: true, items: true } as const;
-  const [products, categories, manualOrders, recentOrders, users, coupons, banner] = await Promise.all([
+  const [products, categories, orders, users, coupons, banner] = await Promise.all([
     prisma.product.findMany({
       include: { category: true },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     prisma.order.findMany({
-      where: { status: { in: [...manualOrderStatuses] } },
       include: orderInclude,
       orderBy: { createdAt: "desc" },
-    }),
-    prisma.order.findMany({
-      where: { status: { notIn: [...manualOrderStatuses] } },
-      include: orderInclude,
-      orderBy: { createdAt: "desc" },
-      take: 25,
     }),
     prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 25 }),
     prisma.coupon.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.banner.findFirst({ where: { id: "home-hero" } }),
   ]);
-  const orders = [...manualOrders, ...recentOrders];
+  const orderQueues = adminOrderQueues.map((queue) => ({
+    ...queue,
+    orders: orders.filter((order) => getAdminOrderQueueKey(order.status) === queue.key),
+  }));
 
   const paidRevenue = orders
     .filter((order) => order.paymentStatus === "PAID")
     .reduce((total, order) => total + order.total, 0);
-  const pendingOrders = orders.filter((order) => order.status !== "DELIVERED" && order.status !== "CANCELLED").length;
+  const pendingOrders = orders.filter((order) => {
+    const status = normalizeOrderStatus(order.status);
+
+    return status !== "DELIVERED" && status !== "CANCELLED";
+  }).length;
 
   return (
     <section className="admin-page">
       <div className="section-heading">
         <span className="panel-label">Admin dashboard</span>
         <h1>Pour n Art operations</h1>
-        <p>Manage handmade catalog data, orders, delivery statuses, coupons, and homepage content.</p>
+        <p>Manage handmade catalog data, custom gift orders, workflow statuses, coupons, and homepage content.</p>
       </div>
 
       <div className="admin-stats">
@@ -167,16 +173,22 @@ export default async function AdminPage() {
           <input type="hidden" name="id" value={banner?.id ?? "home-hero"} />
           <label>
             <span>Title</span>
-            <input name="title" defaultValue={banner?.title ?? "Custom resin art, hand-poured for gifting moments"} />
+            <input name="title" defaultValue={banner?.title ?? "Handcrafted gifts made for moments that matter."} />
           </label>
           <label>
             <span>Subtitle</span>
-            <textarea name="subtitle" defaultValue={banner?.subtitle ?? ""} />
+            <textarea
+              name="subtitle"
+              defaultValue={
+                banner?.subtitle ??
+                "Personalized resin gifts, statement decor, and thoughtful pieces inspired by memories, nature, and the ocean."
+              }
+            />
           </label>
           <div className="form-grid">
             <label>
               <span>CTA label</span>
-              <input name="ctaLabel" defaultValue={banner?.ctaLabel ?? "Explore the collection"} />
+              <input name="ctaLabel" defaultValue={banner?.ctaLabel ?? "Explore Collections"} />
             </label>
             <label>
               <span>CTA link</span>
@@ -261,11 +273,20 @@ export default async function AdminPage() {
       <section className="admin-section">
         <div className="admin-section-heading">
           <h2>Orders</h2>
-          <span>Manual statuses until dispatch, courier tracking after shipping.</span>
+          <span>Move each custom gift through the practical workflow queues.</span>
         </div>
-        <div className="admin-list">
-          {orders.map((order) => {
-            const actionNeeded = needsManualAction(order.status);
+        <div className="admin-queue-list">
+          {orderQueues.map((queue) => (
+            <section className="admin-order-queue" key={queue.key}>
+              <div className="admin-queue-heading">
+                <h3>{queue.label}</h3>
+                <span>{queue.orders.length} {queue.orders.length === 1 ? "order" : "orders"}</span>
+              </div>
+              <div className="admin-list">
+                {queue.orders.length > 0 ? (
+                  queue.orders.map((order) => {
+                    const actionNeeded = needsWorkflowAction(order.status);
+                    const selectedStatus = normalizeOrderStatus(order.status) ?? "ORDER_RECEIVED";
 
             return (
             <details className={`admin-item ${actionNeeded ? "admin-item-action" : ""}`} key={order.id}>
@@ -274,7 +295,7 @@ export default async function AdminPage() {
                   <strong>{order.orderNumber}</strong>
                   <small>
                     {order.user.name} · {formatINR(order.total)} ·{" "}
-                    {orderStatusLabel[order.status as keyof typeof orderStatusLabel] ?? order.status}
+                    {getAdminOrderStatusLabel(order.status)}
                   </small>
                 </span>
                 {actionNeeded ? (
@@ -288,10 +309,10 @@ export default async function AdminPage() {
                 <div className="form-grid">
                   <label>
                     <span>Status</span>
-                    <select name="status" defaultValue={order.status}>
+                    <select name="status" defaultValue={selectedStatus}>
                       {ORDER_STATUSES.map((status) => (
                         <option value={status} key={status}>
-                          {orderStatusLabel[status]}
+                          {adminOrderStatusLabel[status]}
                         </option>
                       ))}
                     </select>
@@ -307,29 +328,35 @@ export default async function AdminPage() {
                     </select>
                   </label>
                   <label>
-                    <span>Courier</span>
+                    <span>Courier / pickup partner</span>
                     <input name="courierName" defaultValue={order.courierName ?? ""} />
                   </label>
                   <label>
-                    <span>Tracking ID</span>
+                    <span>Reference ID</span>
                     <input name="courierTrackingId" defaultValue={order.courierTrackingId ?? ""} />
                   </label>
                   <label>
-                    <span>Tracking URL</span>
+                    <span>Status URL</span>
                     <input name="courierTrackingUrl" defaultValue={order.courierTrackingUrl ?? ""} />
                   </label>
                 </div>
                 <label>
                   <span>Customer update note</span>
-                  <textarea name="note" placeholder="Short delivery/status update for email and tracking timeline" />
+                  <textarea name="note" placeholder="Short crafting journey update for email and the order timeline" />
                 </label>
                 <button className="primary-button" type="submit">
                   Update order
                 </button>
               </form>
             </details>
-            );
-          })}
+                    );
+                  })
+                ) : (
+                  <p className="queue-empty">No orders in this queue.</p>
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       </section>
 

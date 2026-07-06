@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist_Mono, Manrope } from "next/font/google";
 import { CartProvider } from "@/components/cart-provider";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -23,8 +24,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pour n Art | Custom Resin Art",
-  description: "Premium handmade resin art, custom gifts, coasters, name plates, trays, and keepsakes shipped across India.",
+  title: "Pour n Art | Handcrafted Custom Gifts",
+  description:
+    "Premium handmade custom gifts, personalized pieces, statement decor, and made-to-order pieces inspired by memories, nature, and the ocean.",
 };
 
 export default function RootLayout({
@@ -42,6 +44,7 @@ export default function RootLayout({
           <SiteHeader />
           <main>{children}</main>
           <SiteFooter />
+          <MobileBottomNav />
         </CartProvider>
       </body>
     </html>

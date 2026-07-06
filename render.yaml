@@ -19,6 +19,8 @@ services:
         generateValue: true
       - key: NEXT_PUBLIC_APP_URL
         sync: false
+      - key: EMAIL_APP_URL
+        value: "https://pournart.in"
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
@@ -29,17 +31,19 @@ services:
         sync: false
       - key: RAZORPAY_CAPTURE_ON_VERIFY
         value: "false"
-      - key: SMTP_HOST
+      - key: RESEND_API_KEY
         sync: false
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
+      - key: EMAIL_STUDIO
+        value: "Pour n Art Studio <studio@pournart.in>"
+      - key: EMAIL_ORDERS
+        value: "Pour n Art Orders <orders@pournart.in>"
+      - key: EMAIL_SUPPORT
+        value: "Pour n Art Support <support@pournart.in>"
+      - key: EMAIL_CONTACT
+        value: "Pour n Art <contact@pournart.in>"
+      - key: EMAIL_ADMIN
         sync: false
-      - key: SMTP_PASS
-        sync: false
-      - key: MAIL_FROM
-        sync: false
-      - key: ADMIN_EMAIL
-        sync: false
+      - key: EMAIL_QUEUE_SECRET
+        generateValue: true
       - key: NEXT_PUBLIC_WHATSAPP_NUMBER
         sync: false

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { formatINR } from "@/lib/money";
+import { warmDisplayCopy } from "@/lib/product-positioning";
 import type { CustomizationField } from "@/lib/types";
 
 type AddToCartFormProps = {
@@ -45,13 +46,20 @@ export function AddToCartForm({ product, customizationFields }: AddToCartFormPro
     window.setTimeout(() => setAdded(false), 2200);
   }
 
+  const addButtonContent = (
+    <>
+      {added ? <Check aria-hidden size={18} /> : <ShoppingBag aria-hidden size={18} />}
+      {added ? "Added" : `Add ${formatINR(total)}`}
+    </>
+  );
+
   return (
     <section className="purchase-panel" aria-label="Customize and add to cart">
-      <div>
+      <div className="purchase-panel-summary">
         <span className="panel-label">Custom handmade order</span>
         <h2>{formatINR(product.price)}</h2>
         <p>
-          Made in {product.handmadeDaysMin}-{product.handmadeDaysMax} days before dispatch.
+          Made in {product.handmadeDaysMin}-{product.handmadeDaysMax} days before packing.
         </p>
       </div>
 
@@ -76,34 +84,48 @@ export function AddToCartForm({ product, customizationFields }: AddToCartFormPro
       </div>
 
       <div className="custom-fields">
-        {customizationFields.map((field) => (
-          <label key={field.name}>
-            <span>{field.label}</span>
-            {field.type === "textarea" ? (
-              <textarea
-                placeholder={field.placeholder}
-                value={customization[field.name] ?? ""}
-                onChange={(event) =>
-                  setCustomization((current) => ({ ...current, [field.name]: event.target.value }))
-                }
-              />
-            ) : (
-              <input
-                placeholder={field.placeholder}
-                value={customization[field.name] ?? ""}
-                onChange={(event) =>
-                  setCustomization((current) => ({ ...current, [field.name]: event.target.value }))
-                }
-              />
-            )}
-          </label>
-        ))}
+        {customizationFields.map((field) => {
+          const label = warmDisplayCopy(field.label);
+          const placeholder = field.placeholder ? warmDisplayCopy(field.placeholder) : undefined;
+
+          return (
+            <label key={field.name}>
+              <span>{label}</span>
+              {field.type === "textarea" ? (
+                <textarea
+                  placeholder={placeholder}
+                  value={customization[field.name] ?? ""}
+                  onChange={(event) =>
+                    setCustomization((current) => ({ ...current, [field.name]: event.target.value }))
+                  }
+                />
+              ) : (
+                <input
+                  placeholder={placeholder}
+                  value={customization[field.name] ?? ""}
+                  onChange={(event) =>
+                    setCustomization((current) => ({ ...current, [field.name]: event.target.value }))
+                  }
+                />
+              )}
+            </label>
+          );
+        })}
       </div>
 
       <button className="primary-button" type="button" onClick={handleAddToCart}>
-        {added ? <Check aria-hidden size={18} /> : <ShoppingBag aria-hidden size={18} />}
-        {added ? "Added" : `Add ${formatINR(total)}`}
+        {addButtonContent}
       </button>
+
+      <div className="mobile-product-purchase-bar" aria-label="Mobile purchase action">
+        <span>
+          <small>Total</small>
+          <strong>{formatINR(total)}</strong>
+        </span>
+        <button className="primary-button" type="button" onClick={handleAddToCart}>
+          {addButtonContent}
+        </button>
+      </div>
     </section>
   );
 }

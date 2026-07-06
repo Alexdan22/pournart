@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendOrderNotification } from "@/lib/notifications";
+import { dispatchEmailEvent } from "@/lib/email";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 
 type RazorpayWebhookEvent = {
@@ -49,19 +49,19 @@ export async function POST(request: Request) {
         timeline: {
           create: {
             status: "PAYMENT_CONFIRMED",
-            title: "Payment confirmed",
-            note: `Razorpay webhook received: ${event.event}.`,
+            title: "Payment Confirmed",
+            note: `Razorpay webhook received: ${event.event}. Your custom gift is ready for design review.`,
             actor: "SYSTEM",
           },
         },
       },
     });
 
-    await sendOrderNotification("PAYMENT_SUCCESS", updatedOrder.id);
+    await dispatchEmailEvent("PAYMENT_CONFIRMED", { orderId: updatedOrder.id });
   }
 
   if (event.event === "payment.failed") {
-    await prisma.order.update({
+    const failedOrder = await prisma.order.update({
       where: { id: order.id },
       data: {
         paymentStatus: "FAILED",
@@ -75,6 +75,8 @@ export async function POST(request: Request) {
         },
       },
     });
+
+    await dispatchEmailEvent("PAYMENT_FAILED", { orderId: failedOrder.id });
   }
 
   return NextResponse.json({ ok: true });

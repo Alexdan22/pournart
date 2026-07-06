@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart-provider";
 import { formatINR } from "@/lib/money";
+import { warmDisplayCopy } from "@/lib/product-positioning";
 
 export default function CartPage() {
   const { items, subtotal, getItemKey, updateQuantity, removeItem } = useCart();
@@ -14,9 +15,9 @@ export default function CartPage() {
       <section className="empty-state">
         <ShoppingBag aria-hidden size={36} />
         <h1>Your cart is empty.</h1>
-        <p>Choose a resin piece and add your customization notes.</p>
+        <p>Choose a handcrafted piece and add your personalization notes.</p>
         <Link className="primary-button" href="/products">
-          Shop products <ArrowRight aria-hidden size={18} />
+          Explore collections <ArrowRight aria-hidden size={18} />
         </Link>
       </section>
     );
@@ -33,13 +34,15 @@ export default function CartPage() {
         <div className="cart-items">
           {items.map((item) => {
             const key = getItemKey(item);
+            const displayName = warmDisplayCopy(item.name);
+            const displayCategory = warmDisplayCopy(item.categoryName);
 
             return (
               <article className="cart-item" key={key}>
-                <Image src={item.imageUrl} alt={item.name} width={140} height={140} />
+                <Image src={item.imageUrl} alt={displayName} width={140} height={140} />
                 <div>
-                  <Link href={`/products/${item.slug}`}>{item.name}</Link>
-                  <span>{item.categoryName}</span>
+                  <Link href={`/products/${item.slug}`}>{displayName}</Link>
+                  <span>{displayCategory}</span>
                   {Object.values(item.customization).filter(Boolean).length > 0 ? (
                     <small>{Object.values(item.customization).filter(Boolean).join(" / ")}</small>
                   ) : null}
@@ -47,14 +50,14 @@ export default function CartPage() {
                 </div>
                 <div className="cart-item-controls">
                   <input
-                    aria-label={`Quantity for ${item.name}`}
+                    aria-label={`Quantity for ${displayName}`}
                     type="number"
                     min={1}
                     max={20}
                     value={item.quantity}
                     onChange={(event) => updateQuantity(key, Number(event.target.value))}
                   />
-                  <button className="icon-link" aria-label={`Remove ${item.name}`} onClick={() => removeItem(key)}>
+                  <button className="icon-link" aria-label={`Remove ${displayName}`} onClick={() => removeItem(key)}>
                     <Trash2 aria-hidden size={18} />
                   </button>
                 </div>

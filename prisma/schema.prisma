@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -18,6 +19,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   addresses    Address[]
   orders       Order[]
+  wishlist     WishlistItem[]
 }
 
 model Address {
@@ -68,6 +70,20 @@ model Product {
   updatedAt           DateTime    @updatedAt
   category            Category    @relation(fields: [categoryId], references: [id])
   orderItems          OrderItem[]
+  wishlistItems       WishlistItem[]
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
 }
 
 model Coupon {
@@ -154,4 +170,44 @@ model Banner {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model EmailQueue {
+  id          String    @id @default(cuid())
+  event       String
+  recipient   String
+  subject     String
+  template    String
+  payload     String
+  status      String    @default("PENDING")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  lastError   String?
+  scheduledAt DateTime  @default(now())
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  logs        EmailLog[]
+
+  @@index([status, scheduledAt])
+  @@index([event])
+  @@index([recipient])
+}
+
+model EmailLog {
+  id           String     @id @default(cuid())
+  queueId      String?
+  event        String
+  recipient    String
+  subject      String
+  status       String
+  providerResponse String?    @map("smtpResponse")
+  error        String?
+  createdAt    DateTime   @default(now())
+  queue        EmailQueue? @relation(fields: [queueId], references: [id], onDelete: SetNull)
+
+  @@index([queueId])
+  @@index([event])
+  @@index([status])
+  @@index([createdAt])
 }

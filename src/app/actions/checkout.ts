@@ -1,11 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { dispatchEmailEvent } from "@/lib/email";
 import { getRazorpayClient, isRazorpayConfigured } from "@/lib/razorpay";
 import { requireUser } from "@/lib/session";
-import { sendOrderNotification } from "@/lib/notifications";
 import type { ActionState } from "@/lib/types";
 
 const checkoutItemSchema = z.object({
@@ -23,12 +24,47 @@ const checkoutSchema = z.object({
   deliveryCity: z.string().min(2, "Enter a city."),
   deliveryState: z.string().min(2, "Enter a state."),
   deliveryPincode: z.string().min(5, "Enter a pincode."),
+  deliveryAddressLabel: z.string().min(2).max(30).default("Home"),
+  saveAddress: z.boolean().default(true),
   customNotes: z.string().optional(),
 });
 
 function buildOrderNumber() {
   const suffix = Date.now().toString(36).toUpperCase();
   return `PNA-${suffix}`;
+}
+
+async function saveAddressForFutureOrders(userId: string, data: z.infer<typeof checkoutSchema>) {
+  const line2 = data.deliveryLine2?.trim() || null;
+
+  const existingAddress = await prisma.address.findFirst({
+    where: {
+      userId,
+      line1: data.deliveryLine1.trim(),
+      line2,
+      city: data.deliveryCity.trim(),
+      state: data.deliveryState.trim(),
+      pincode: data.deliveryPincode.trim(),
+      country: "India",
+    },
+  });
+
+  if (existingAddress) {
+    return existingAddress;
+  }
+
+  return prisma.address.create({
+    data: {
+      userId,
+      label: data.deliveryAddressLabel.trim() || "Home",
+      line1: data.deliveryLine1.trim(),
+      line2,
+      city: data.deliveryCity.trim(),
+      state: data.deliveryState.trim(),
+      pincode: data.deliveryPincode.trim(),
+      country: "India",
+    },
+  });
 }
 
 export async function createOrderAction(
@@ -53,6 +89,8 @@ export async function createOrderAction(
     deliveryCity: formData.get("deliveryCity"),
     deliveryState: formData.get("deliveryState"),
     deliveryPincode: formData.get("deliveryPincode"),
+    deliveryAddressLabel: formData.get("deliveryAddressLabel") || "Home",
+    saveAddress: formData.get("saveAddress") === "on" || formData.get("saveAddress") === "true",
     customNotes: formData.get("customNotes") || "",
   });
 
@@ -101,6 +139,15 @@ export async function createOrderAction(
   const total = subtotal + shippingFee;
   const orderNumber = buildOrderNumber();
 
+  if (parsed.data.saveAddress) {
+    await saveAddressForFutureOrders(session.id, parsed.data);
+  }
+
+  await prisma.user.update({
+    where: { id: session.id },
+    data: { phone: parsed.data.deliveryPhone },
+  });
+
   let order = await prisma.order.create({
     data: {
       orderNumber,
@@ -119,12 +166,13 @@ export async function createOrderAction(
       items: { create: orderItems },
       timeline: {
         create: {
-          status: "PLACED",
-          title: "Order placed",
-          note: "We received your order details. Payment confirmation is pending.",
+          status: "ORDER_RECEIVED",
+          title: "Order Received",
+          note: "We received your custom gift order details. Payment confirmation is pending.",
           actor: "CUSTOMER",
         },
       },
+      status: "ORDER_RECEIVED",
     },
   });
 
@@ -149,7 +197,9 @@ export async function createOrderAction(
     }
   }
 
-  await sendOrderNotification("ORDER_PLACED", order.id);
+  await dispatchEmailEvent("ORDER_PLACED", { orderId: order.id });
+  revalidatePath("/account");
+  revalidatePath("/checkout");
 
   redirect(`/checkout/payment/${order.orderNumber}`);
 }
@@ -178,14 +228,14 @@ export async function markLocalPaymentPaidAction(formData: FormData) {
       timeline: {
         create: {
           status: "PAYMENT_CONFIRMED",
-          title: "Payment confirmed",
-          note: "Local demo payment was marked as paid. Replace this with Razorpay test credentials before launch.",
+          title: "Payment Confirmed",
+          note: "Local demo payment was marked as paid. Your custom gift is ready for design review.",
           actor: "SYSTEM",
         },
       },
     },
   });
 
-  await sendOrderNotification("PAYMENT_SUCCESS", updatedOrder.id);
+  await dispatchEmailEvent("PAYMENT_CONFIRMED", { orderId: updatedOrder.id });
   redirect(`/orders/${updatedOrder.orderNumber}`);
 }
