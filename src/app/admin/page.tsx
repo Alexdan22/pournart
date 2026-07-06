@@ -2,10 +2,13 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  CreditCard,
+  Kanban,
   MailWarning,
   PackageCheck,
   ReceiptText,
   ShoppingBag,
+  TicketPercent,
   Truck,
   UserRound,
 } from "lucide-react";
@@ -76,6 +79,36 @@ export default async function AdminDashboardPage() {
   ]);
   const reserved = await reservedInventoryByProduct(products.map((product) => product.id));
   const lowInventory = products.filter((product) => product.inventory - (reserved.get(product.id) ?? 0) <= product.lowStockThreshold);
+  const attentionItems = [
+    {
+      title: "Pending orders",
+      value: pendingOrders,
+      href: "/admin/orders?status=pending",
+      tone: pendingOrders ? "warning" : "neutral",
+      icon: ShoppingBag,
+    },
+    {
+      title: "Pending payments",
+      value: pendingPayments,
+      href: "/admin/orders?payment=PENDING",
+      tone: pendingPayments ? "danger" : "neutral",
+      icon: CreditCard,
+    },
+    {
+      title: "Low inventory",
+      value: lowInventory.length,
+      href: "/admin/inventory",
+      tone: lowInventory.length ? "warning" : "neutral",
+      icon: AlertTriangle,
+    },
+    {
+      title: "Email failures",
+      value: failedEmails,
+      href: "/admin/email-queue?status=FAILED",
+      tone: failedEmails ? "danger" : "neutral",
+      icon: MailWarning,
+    },
+  ];
 
   return (
     <section className="admin-dashboard">
@@ -88,11 +121,34 @@ export default async function AdminDashboardPage() {
           <Link className="admin-button primary" href="/admin/orders">
             <ShoppingBag aria-hidden size={16} /> Orders
           </Link>
+          <Link className="admin-button" href="/admin/production">
+            <Kanban aria-hidden size={16} /> Board
+          </Link>
           <Link className="admin-button" href="/admin/products">
             <ReceiptText aria-hidden size={16} /> Products
           </Link>
         </div>
       </div>
+
+      <section className="admin-attention-panel">
+        <div>
+          <span>Priority Queue</span>
+          <h2>Needs attention</h2>
+        </div>
+        <div className="admin-attention-grid">
+          {attentionItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <Link className={`admin-attention-item tone-${item.tone}`} href={item.href} key={item.title}>
+                <Icon aria-hidden size={17} />
+                <span>{item.title}</span>
+                <strong>{item.value}</strong>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="admin-metric-grid">
         {statCard("Today's Orders", todaysOrders, "/admin/orders?status=today")}
@@ -193,16 +249,28 @@ export default async function AdminDashboardPage() {
         </div>
         <div className="admin-quick-actions">
           <Link href="/admin/orders?status=ORDER_RECEIVED">
-            <ShoppingBag aria-hidden size={17} /> Review new orders
+            <ShoppingBag aria-hidden size={17} />
+            <span>Review new orders</span>
           </Link>
           <Link href="/admin/orders?status=PACKED">
-            <Truck aria-hidden size={17} /> Ship packed orders
+            <Truck aria-hidden size={17} />
+            <span>Ship packed orders</span>
+          </Link>
+          <Link href="/admin/production">
+            <Kanban aria-hidden size={17} />
+            <span>Production board</span>
+          </Link>
+          <Link href="/admin/coupons">
+            <TicketPercent aria-hidden size={17} />
+            <span>Manage coupons</span>
           </Link>
           <Link href="/admin/email-queue?status=FAILED">
-            <MailWarning aria-hidden size={17} /> Fix failed emails
+            <MailWarning aria-hidden size={17} />
+            <span>Fix failed emails</span>
           </Link>
           <Link href="/admin/inventory">
-            <AlertTriangle aria-hidden size={17} /> Restock attention items
+            <AlertTriangle aria-hidden size={17} />
+            <span>Restock attention items</span>
           </Link>
         </div>
       </section>

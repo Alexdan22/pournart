@@ -20,8 +20,9 @@ export default async function CheckoutPage() {
         state: true,
         pincode: true,
         country: true,
+        isDefault: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     }),
   ]);
 

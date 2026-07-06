@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AccountNav } from "@/components/account-nav";
 import { getOrderStatusLabel, paymentStatusLabel } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { formatINR } from "@/lib/money";
@@ -17,6 +18,7 @@ export default async function OrdersPage() {
         <span className="panel-label">Your Crafting Journey</span>
         <h1>Your handcrafted custom gift orders.</h1>
       </div>
+      <AccountNav active="Orders" />
       <div className="orders-list">
         {orders.map((order) => (
           <Link className="order-row" href={`/orders/${order.orderNumber}`} key={order.id}>

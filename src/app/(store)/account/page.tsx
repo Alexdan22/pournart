@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { LogOut, MapPin, PackageCheck, ShoppingBag, Trash2, UserRound } from "lucide-react";
-import { deleteAddressAction } from "@/app/actions/account";
+import { LogOut, MapPin, PackageCheck, ShoppingBag, UserRound } from "lucide-react";
+import { updateProfileAction } from "@/app/actions/account";
 import { logoutAction } from "@/app/actions/auth";
+import { AccountNav } from "@/components/account-nav";
 import { getOrderStatusLabel } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { formatINR } from "@/lib/money";
@@ -20,8 +21,13 @@ function formatAddress(address: {
     .join(", ");
 }
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ profile?: string }>;
+}) {
   const session = await requireUser();
+  const params = await searchParams;
   const [user, orders, orderCount, savedAddresses] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.id },
@@ -41,9 +47,15 @@ export default async function AccountPage() {
     prisma.order.count({ where: { userId: session.id } }),
     prisma.address.findMany({
       where: { userId: session.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     }),
   ]);
+  const profileMessage =
+    params.profile === "email-taken"
+      ? "That email is already connected to another account."
+      : params.profile === "invalid"
+        ? "Please check the profile details and try again."
+        : null;
 
   return (
     <section className="account-page">
@@ -54,11 +66,13 @@ export default async function AccountPage() {
           <p>Your profile, saved delivery addresses, and recent handcrafted orders live here.</p>
         </div>
         <form action={logoutAction}>
-          <button className="secondary-button" type="submit">
-            <LogOut aria-hidden size={18} /> Logout
+          <button className="account-logout-button" type="submit">
+            <LogOut aria-hidden size={15} /> Sign out
           </button>
         </form>
       </div>
+
+      <AccountNav active="Account" />
 
       <div className="account-stats">
         <div>
@@ -99,6 +113,22 @@ export default async function AccountPage() {
                 <dd>{user?.role === "ADMIN" ? "Admin" : "Customer"}</dd>
               </div>
             </dl>
+            <form className="account-form profile-edit-form" action={updateProfileAction}>
+              <label>
+                <span>Name</span>
+                <input name="name" defaultValue={user?.name ?? session.name} required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input name="email" type="email" defaultValue={user?.email ?? session.email} required />
+              </label>
+              <label>
+                <span>Phone</span>
+                <input name="phone" defaultValue={user?.phone ?? ""} placeholder="Phone number" />
+              </label>
+              {profileMessage ? <p className="form-message">{profileMessage}</p> : null}
+              <button className="secondary-button" type="submit">Save profile</button>
+            </form>
           </section>
 
           <section className="account-panel">
@@ -114,23 +144,21 @@ export default async function AccountPage() {
                 {savedAddresses.map((address) => (
                   <article className="saved-address-card" key={address.id}>
                     <div>
-                      <strong>{address.label}</strong>
+                      <strong>
+                        {address.label}
+                        {address.isDefault ? <span className="address-badge">Default</span> : null}
+                      </strong>
                       <p>{formatAddress(address)}</p>
                     </div>
-                    <form action={deleteAddressAction}>
-                      <input type="hidden" name="addressId" value={address.id} />
-                      <button className="icon-link" type="submit" aria-label={`Delete ${address.label} address`}>
-                        <Trash2 aria-hidden size={17} />
-                      </button>
-                    </form>
                   </article>
                 ))}
+                <Link className="secondary-button" href="/account/addresses">Manage addresses</Link>
               </div>
             ) : (
               <div className="soft-empty">
                 <p>No saved addresses yet. Your next checkout can save one for faster future orders.</p>
-                <Link className="secondary-button" href="/products">
-                  Explore collections
+                <Link className="secondary-button" href="/account/addresses">
+                  Add address
                 </Link>
               </div>
             )}
@@ -183,6 +211,14 @@ export default async function AccountPage() {
           <Link href="/orders">
             <PackageCheck aria-hidden size={18} />
             Crafting journey
+          </Link>
+          <Link href="/account/addresses">
+            <MapPin aria-hidden size={18} />
+            Saved addresses
+          </Link>
+          <Link href="/account/reviews">
+            <UserRound aria-hidden size={18} />
+            My reviews
           </Link>
         </aside>
       </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Heart } from "lucide-react";
+import { AccountNav } from "@/components/account-nav";
 import { ProductCard } from "@/components/product-card";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -25,6 +26,7 @@ export default async function WishlistPage() {
           Shop more <ArrowRight aria-hidden size={18} />
         </Link>
       </div>
+      <AccountNav active="Wishlist" />
 
       {products.length > 0 ? (
         <div className="product-grid">

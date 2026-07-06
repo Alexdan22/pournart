@@ -1,12 +1,58 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Archive, Check, Search, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, Check, Search, Trash2 } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 import { bulkProductAction, quickUpdateProductAction } from "@/app/actions/admin";
+import { AdminSortLink } from "@/components/admin-sort-link";
 import { pagination, pageCount, type AdminTableSearchParams } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 
 function rupees(amount: number) {
   return amount / 100;
+}
+
+function sortDirection(value?: string): Prisma.SortOrder {
+  return value === "asc" ? "asc" : "desc";
+}
+
+function productSort(sort: string | undefined, direction: Prisma.SortOrder): Prisma.ProductOrderByWithRelationInput[] {
+  if (sort === "name") {
+    return [{ name: direction }];
+  }
+
+  if (sort === "category") {
+    return [{ category: { name: direction } }, { updatedAt: "desc" }];
+  }
+
+  if (sort === "price") {
+    return [{ price: direction }, { updatedAt: "desc" }];
+  }
+
+  if (sort === "inventory") {
+    return [{ inventory: direction }, { updatedAt: "desc" }];
+  }
+
+  if (sort === "status") {
+    return [{ adminStatus: direction }, { updatedAt: "desc" }];
+  }
+
+  return [{ updatedAt: direction }];
+}
+
+function hrefWith(params: AdminTableSearchParams, overrides: Record<string, string | number>) {
+  const next = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      next.set(key, value);
+    }
+  }
+
+  for (const [key, value] of Object.entries(overrides)) {
+    next.set(key, String(value));
+  }
+
+  return `/admin/products?${next.toString()}`;
 }
 
 export default async function AdminProductsPage({
@@ -17,7 +63,8 @@ export default async function AdminProductsPage({
   const params = await searchParams;
   const { page, take, skip } = pagination(params.page);
   const query = params.q?.trim();
-  const where = {
+  const direction = sortDirection(params.direction);
+  const where: Prisma.ProductWhereInput = {
     adminStatus: params.status ? params.status : undefined,
     OR: query
       ? [
@@ -31,7 +78,7 @@ export default async function AdminProductsPage({
     prisma.product.findMany({
       where,
       include: { category: true },
-      orderBy: { updatedAt: "desc" },
+      orderBy: productSort(params.sort, direction),
       skip,
       take,
     }),
@@ -83,12 +130,12 @@ export default async function AdminProductsPage({
             <tr>
               <th><span className="sr-only">Select</span></th>
               <th>Image</th>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Inventory</th>
-              <th>Status</th>
-              <th>Updated</th>
+              <th><AdminSortLink basePath="/admin/products" label="Name" searchParams={params} sortKey="name" defaultSort="updated" /></th>
+              <th><AdminSortLink basePath="/admin/products" label="Category" searchParams={params} sortKey="category" defaultSort="updated" /></th>
+              <th><AdminSortLink basePath="/admin/products" label="Price" searchParams={params} sortKey="price" defaultSort="updated" /></th>
+              <th><AdminSortLink basePath="/admin/products" label="Inventory" searchParams={params} sortKey="inventory" defaultSort="updated" /></th>
+              <th><AdminSortLink basePath="/admin/products" label="Status" searchParams={params} sortKey="status" defaultSort="updated" /></th>
+              <th><AdminSortLink basePath="/admin/products" label="Updated" searchParams={params} sortKey="updated" defaultSort="updated" /></th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -143,7 +190,13 @@ export default async function AdminProductsPage({
         </table>
       </div>
       <div className="admin-pagination">
+        <Link className={page <= 1 ? "disabled" : ""} href={hrefWith(params, { page: Math.max(1, page - 1) })}>
+          <ArrowLeft aria-hidden size={15} /> Previous
+        </Link>
         <span>Page {page} of {pages} / {total} products</span>
+        <Link className={page >= pages ? "disabled" : ""} href={hrefWith(params, { page: Math.min(pages, page + 1) })}>
+          Next <ArrowRight aria-hidden size={15} />
+        </Link>
       </div>
     </section>
   );

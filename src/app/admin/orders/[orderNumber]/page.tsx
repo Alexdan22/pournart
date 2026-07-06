@@ -281,15 +281,39 @@ export default async function AdminOrderDetailPage(props: PageProps<"/admin/orde
           </div>
           <div className="admin-queue-mini">
             {order.emailQueue.map((email) => (
-              <article key={email.id}>
+              <article className="admin-email-history-card" key={email.id}>
                 <Mail aria-hidden size={15} />
                 <span>
                   <strong>{email.subject}</strong>
-                  <small>{email.event} / {email.status} / {email.createdAt.toLocaleString("en-IN")}</small>
+                  <small>{email.event} / {email.status} / {email.attempts}/{email.maxAttempts} attempts</small>
+                  <small>Queued {email.createdAt.toLocaleString("en-IN")} / Scheduled {email.scheduledAt.toLocaleString("en-IN")}</small>
+                  <small>{email.sentAt ? `Sent ${email.sentAt.toLocaleString("en-IN")}` : "Not sent yet"}</small>
                 </span>
+                <details className="admin-inline-details">
+                  <summary>Payload & logs</summary>
+                  {email.lastError ? <p className="admin-error-text">{email.lastError}</p> : null}
+                  <pre>{email.payload}</pre>
+                  {email.logs.map((log) => (
+                    <p key={log.id}>
+                      <strong>{log.status}</strong> {log.createdAt.toLocaleString("en-IN")} / {log.error || log.providerResponse || "ok"}
+                    </p>
+                  ))}
+                  {email.logs.length === 0 ? <p>No provider logs yet.</p> : null}
+                </details>
               </article>
             ))}
             {order.emailQueue.length === 0 ? <p>No email jobs for this order yet.</p> : null}
+          </div>
+          <div className="admin-provider-log-list">
+            <h3>Provider log</h3>
+            {order.emailLogs.map((log) => (
+              <article key={log.id}>
+                <strong>{log.subject}</strong>
+                <small>{log.event} / {log.status} / {log.createdAt.toLocaleString("en-IN")}</small>
+                <p>{log.error || log.providerResponse || "ok"}</p>
+              </article>
+            ))}
+            {order.emailLogs.length === 0 ? <p>No provider log rows for this order yet.</p> : null}
           </div>
         </section>
       </div>

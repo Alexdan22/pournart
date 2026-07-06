@@ -14,10 +14,12 @@ export const lowInventoryDefault = 3;
 export const adminNavItems = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/production", label: "Production Board" },
   { href: "/admin/products", label: "Products" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/inventory", label: "Inventory" },
+  { href: "/admin/coupons", label: "Coupons" },
   { href: "/admin/email-queue", label: "Email Queue" },
   { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/analytics", label: "Analytics" },

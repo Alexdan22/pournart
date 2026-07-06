@@ -11,6 +11,7 @@ import {
   ChevronRight,
   FolderTree,
   Inbox,
+  Kanban,
   LayoutDashboard,
   Mail,
   Menu,
@@ -19,6 +20,7 @@ import {
   Settings,
   ShoppingBag,
   Star,
+  TicketPercent,
   Users,
   X,
 } from "lucide-react";
@@ -43,10 +45,12 @@ type SearchResult = {
 const iconByLabel: Record<string, React.ComponentType<{ size?: number; "aria-hidden"?: boolean }>> = {
   Dashboard: LayoutDashboard,
   Orders: ShoppingBag,
+  "Production Board": Kanban,
   Products: Package,
   Categories: FolderTree,
   Customers: Users,
   Inventory: Boxes,
+  Coupons: TicketPercent,
   "Email Queue": Mail,
   Reviews: Star,
   Analytics: ChartSpline,

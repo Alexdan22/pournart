@@ -11,6 +11,7 @@ import {
   PAYMENT_STATUSES,
   getDefaultOrderStatusNote,
   getOrderStatusLabel,
+  type OrderStatus,
 } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { dispatchEmailEvent, eventForOrderStatus } from "@/lib/email";
@@ -142,6 +143,25 @@ async function deleteUploadedProductImage(imageUrl: string) {
 
 function appUrl() {
   return (process.env.EMAIL_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+function dateFromForm(value: FormDataEntryValue | null) {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return null;
+  }
+
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function couponValueFromForm(formData: FormData) {
+  const type = String(formData.get("type") || "PERCENT").toUpperCase() === "FIXED" ? "FIXED" : "PERCENT";
+  const rawValue = formData.get("value");
+  const value = type === "FIXED" ? parseRupeesToPaise(rawValue) : Math.max(0, Math.round(Number(rawValue || 0)));
+
+  return { type, value };
 }
 
 function revalidateAdminPaths(...paths: string[]) {
@@ -538,6 +558,135 @@ export async function updateOrderAction(formData: FormData) {
   revalidatePath(`/orders/${order.orderNumber}`);
 }
 
+async function applyOrderStatusChange({
+  orderId,
+  status,
+  note,
+  actorId,
+  internalNote,
+}: {
+  orderId: string;
+  status: OrderStatus;
+  note: string;
+  actorId?: string;
+  internalNote?: string;
+}) {
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status,
+      shippedAt: status === "SHIPPED" ? new Date() : undefined,
+      deliveredAt: status === "DELIVERED" ? new Date() : undefined,
+      timeline: {
+        create: {
+          status,
+          title: getOrderStatusLabel(status),
+          note,
+          actor: "ADMIN",
+        },
+      },
+    },
+  });
+
+  if (internalNote && actorId) {
+    await createInternalNote({
+      targetType: "Order",
+      targetId: order.id,
+      orderId: order.id,
+      authorId: actorId,
+      content: internalNote,
+    });
+  }
+
+  await dispatchEmailEvent(eventForOrderStatus(status), {
+    orderId: order.id,
+    note,
+    status,
+  });
+
+  return order;
+}
+
+export async function moveOrderStatusAction(orderId: string, statusValue: string) {
+  const admin = await requireAdmin();
+
+  if (!orderId) {
+    return;
+  }
+
+  const status = z.enum(ORDER_STATUSES).parse(statusValue);
+  const note = getDefaultOrderStatusNote(status);
+  const order = await applyOrderStatusChange({
+    orderId,
+    status,
+    note,
+    actorId: admin.id,
+    internalNote: `Production board moved order to ${getOrderStatusLabel(status)}.`,
+  });
+
+  revalidateAdminPaths("/admin/production", "/admin/orders", `/admin/orders/${order.orderNumber}`);
+  revalidatePath(`/orders/${order.orderNumber}`);
+}
+
+export async function bulkOrderAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const orderIds = formData.getAll("orderId").map((value) => String(value || "")).filter(Boolean);
+  const bulkAction = String(formData.get("bulkAction") || "");
+
+  if (!orderIds.length || !bulkAction) {
+    return;
+  }
+
+  const orders = await prisma.order.findMany({
+    where: { id: { in: orderIds } },
+    select: { id: true, orderNumber: true, status: true },
+  });
+
+  if (!orders.length) {
+    return;
+  }
+
+  if (bulkAction.startsWith("status:")) {
+    const status = z.enum(ORDER_STATUSES).parse(bulkAction.replace("status:", ""));
+    const note = getDefaultOrderStatusNote(status);
+
+    for (const order of orders) {
+      await applyOrderStatusChange({
+        orderId: order.id,
+        status,
+        note,
+        actorId: admin.id,
+        internalNote: `Bulk action moved order to ${getOrderStatusLabel(status)}.`,
+      });
+    }
+  } else if (bulkAction.startsWith("payment:")) {
+    const paymentStatus = z.enum(PAYMENT_STATUSES).parse(bulkAction.replace("payment:", ""));
+
+    await prisma.$transaction([
+      prisma.order.updateMany({
+        where: { id: { in: orders.map((order) => order.id) } },
+        data: { paymentStatus },
+      }),
+      prisma.orderTimeline.createMany({
+        data: orders.map((order) => ({
+          orderId: order.id,
+          status: order.status,
+          title: "Payment status updated",
+          note: `Payment marked ${paymentStatus.toLowerCase()} by bulk action.`,
+          actor: "ADMIN",
+          isCustomerVisible: false,
+        })),
+      }),
+    ]);
+  }
+
+  revalidateAdminPaths("/admin/orders", "/admin/production");
+  for (const order of orders) {
+    revalidatePath(`/orders/${order.orderNumber}`);
+    revalidatePath(`/admin/orders/${order.orderNumber}`);
+  }
+}
+
 export async function addInternalNoteAction(formData: FormData) {
   const admin = await requireAdmin();
   const targetType = String(formData.get("targetType") || "");
@@ -870,19 +1019,62 @@ export async function markAllNotificationsReadAction() {
 
 export async function createCouponAction(formData: FormData) {
   await requireAdmin();
+  const { type, value } = couponValueFromForm(formData);
 
   await prisma.coupon.create({
     data: {
       code: String(formData.get("code") || "").toUpperCase(),
       description: String(formData.get("description") || ""),
-      type: String(formData.get("type") || "PERCENT"),
-      value: Number(formData.get("value") || 0),
+      type,
+      value,
       minSubtotal: parseRupeesToPaise(formData.get("minSubtotal")),
       usageLimit: formData.get("usageLimit") ? Number(formData.get("usageLimit")) : null,
       isActive: formData.get("isActive") === "on",
+      startsAt: dateFromForm(formData.get("startsAt")),
+      endsAt: dateFromForm(formData.get("endsAt")),
     },
   });
 
+  revalidateAdminPaths("/admin/coupons");
+}
+
+export async function updateCouponAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") || "");
+
+  if (!id) {
+    return;
+  }
+
+  const { type, value } = couponValueFromForm(formData);
+
+  await prisma.coupon.update({
+    where: { id },
+    data: {
+      code: String(formData.get("code") || "").toUpperCase(),
+      description: String(formData.get("description") || ""),
+      type,
+      value,
+      minSubtotal: parseRupeesToPaise(formData.get("minSubtotal")),
+      usageLimit: formData.get("usageLimit") ? Number(formData.get("usageLimit")) : null,
+      isActive: formData.get("isActive") === "on",
+      startsAt: dateFromForm(formData.get("startsAt")),
+      endsAt: dateFromForm(formData.get("endsAt")),
+    },
+  });
+
+  revalidateAdminPaths("/admin/coupons");
+}
+
+export async function deleteCouponAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") || "");
+
+  if (!id) {
+    return;
+  }
+
+  await prisma.coupon.delete({ where: { id } });
   revalidateAdminPaths("/admin/coupons");
 }
 
