@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   CalendarHeart,
@@ -25,6 +26,16 @@ import { ProductCard } from "@/components/product-card";
 import { getActiveCategories, getFeaturedProducts } from "@/lib/catalog";
 import { prisma } from "@/lib/db";
 import { warmDisplayCopy } from "@/lib/product-positioning";
+import { createMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createMetadata({
+  title: "Handcrafted Custom Gifts & Resin Art",
+  description:
+    "Shop handmade resin art, personalized custom gifts, keepsakes, trays, coasters, name plates, and gift-ready decor from Pour n Art.",
+  path: "/",
+  image: "/assets/optimized/resin-hero-home.webp",
+  keywords: ["resin gifts", "custom resin art", "personalized keepsakes", "handmade gifts"],
+});
 
 const occasions = [
   {

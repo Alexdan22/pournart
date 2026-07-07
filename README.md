@@ -37,10 +37,12 @@ Copy `.env.example` to `.env` and fill production values:
 
 - `SESSION_SECRET`
 - `DATABASE_URL`
+- `NEXT_PUBLIC_SITE_URL` or `EMAIL_APP_URL` for canonical SEO URLs
 - `RAZORPAY_KEY_ID`
 - `RAZORPAY_KEY_SECRET`
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID`
 - `RAZORPAY_WEBHOOK_SECRET`
+- Shiprocket settings: `SHIPROCKET_EMAIL`, `SHIPROCKET_PASSWORD`, `SHIPROCKET_PICKUP_LOCATION`, `SHIPROCKET_CHANNEL_ID`, `SHIPROCKET_PICKUP_PINCODE`, and default package dimensions
 - Resend settings: `RESEND_API_KEY`, role senders, and `EMAIL_ADMIN`
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`
 

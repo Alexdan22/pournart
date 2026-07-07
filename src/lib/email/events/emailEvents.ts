@@ -109,12 +109,14 @@ function orderSummary(order: OrderWithEmailData, note?: string): EmailOrderSumma
       pincode: order.deliveryPincode,
       country: "India",
     },
-    estimatedDelivery: estimateFromOrder(order),
+    estimatedDelivery: order.estimatedDelivery
+      ? order.estimatedDelivery.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+      : estimateFromOrder(order),
     orderUrl: `${appUrl()}/orders/${order.orderNumber}`,
     paymentUrl: `${appUrl()}/checkout/payment/${order.orderNumber}`,
     courierName: order.courierName,
-    courierTrackingId: order.courierTrackingId,
-    courierTrackingUrl: order.courierTrackingUrl,
+    courierTrackingId: order.awbCode || order.courierTrackingId,
+    courierTrackingUrl: order.trackingUrl || order.courierTrackingUrl,
     dispatchEstimate: addDays(new Date(), 1).toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
@@ -184,6 +186,7 @@ function customerRole(event: EmailEventName): EmailRole {
     event === "ORDER_PROGRESS_UPDATED" ||
     event === "ORDER_READY_TO_SHIP" ||
     event === "ORDER_SHIPPED" ||
+    event === "SHIPMENT_UPDATED" ||
     event === "ORDER_DELIVERED" ||
     event === "ORDER_CANCELLED" ||
     event === "REVIEW_REQUEST"
@@ -343,6 +346,22 @@ export async function dispatchEmailEvent(event: EmailEventName, payload: EmailEv
         template: "OrderShipped",
         role: customerRole(event),
         data: { ...common, order },
+      });
+    }
+
+    if (event === "SHIPMENT_UPDATED" && order) {
+      jobs.push({
+        event,
+        to: order.customer.email,
+        subject: `Shipment update: ${order.orderNumber}`,
+        template: "CustomerMessage",
+        role: customerRole(event),
+        data: {
+          ...common,
+          order,
+          message: payload.note || "Your shipment has a fresh courier update.",
+          preheader: `Shipment update for ${order.orderNumber}.`,
+        },
       });
     }
 

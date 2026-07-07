@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { AdminShell } from "@/components/admin-shell";
 import { getUnreadNotifications } from "@/lib/admin-data";
+import { createMetadata } from "@/lib/seo";
 import { requireAdmin } from "@/lib/session";
+
+export const metadata: Metadata = createMetadata({
+  title: "Admin",
+  description: "Private Pour n Art admin dashboard.",
+  path: "/admin",
+  noIndex: true,
+});
 
 export default async function AdminLayout({
   children,

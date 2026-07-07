@@ -129,6 +129,7 @@ model Order {
   currency           String          @default("INR")
   subtotal           Int
   shippingFee        Int
+  shippingCharge     Int             @default(0)
   discount           Int             @default(0)
   total              Int
   customNotes        String?
@@ -142,9 +143,20 @@ model Order {
   razorpayOrderId    String?
   razorpayPaymentId  String?
   razorpaySignature  String?
+  shiprocketOrderId  String?
+  shiprocketShipmentId String?
+  awbCode            String?
+  courierCompanyId   Int?
   courierName        String?
   courierTrackingId  String?
   courierTrackingUrl String?
+  pickupPincode      String?
+  estimatedDelivery  DateTime?
+  shipmentStatus     String?
+  trackingUrl        String?
+  trackingEvents     String          @default("[]")
+  pickupGenerated    Boolean         @default(false)
+  shipmentError      String?
   shippedAt          DateTime?
   deliveredAt        DateTime?
   createdAt          DateTime        @default(now())
@@ -157,6 +169,10 @@ model Order {
   emailLogs          EmailLog[]
   reviews            Review[]
   analyticsEvents    AnalyticsEvent[]
+
+  @@index([shiprocketShipmentId])
+  @@index([awbCode])
+  @@index([shipmentStatus])
 }
 
 model OrderItem {

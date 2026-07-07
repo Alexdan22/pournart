@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dispatchEmailEvent } from "@/lib/email";
 import { verifyWebhookSignature } from "@/lib/razorpay";
+import { createShiprocketOrderAfterPayment } from "@/lib/shiprocket";
 
 type RazorpayWebhookEvent = {
   event?: string;
@@ -10,6 +11,8 @@ type RazorpayWebhookEvent = {
       entity?: {
         id?: string;
         order_id?: string;
+        amount?: number | string;
+        currency?: string;
       };
     };
   };
@@ -24,8 +27,9 @@ export async function POST(request: Request) {
   }
 
   const event = JSON.parse(rawBody) as RazorpayWebhookEvent;
-  const razorpayOrderId = event.payload?.payment?.entity?.order_id;
-  const razorpayPaymentId = event.payload?.payment?.entity?.id;
+  const paymentEntity = event.payload?.payment?.entity;
+  const razorpayOrderId = paymentEntity?.order_id;
+  const razorpayPaymentId = paymentEntity?.id;
 
   if (!razorpayOrderId) {
     return NextResponse.json({ ok: true });
@@ -40,6 +44,13 @@ export async function POST(request: Request) {
   }
 
   if (event.event === "payment.captured" || event.event === "payment.authorized") {
+    if (
+      paymentEntity?.amount !== undefined &&
+      (Number(paymentEntity.amount) !== order.total || (paymentEntity.currency && paymentEntity.currency !== "INR"))
+    ) {
+      return NextResponse.json({ error: "Payment amount does not match the order total." }, { status: 400 });
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: {
@@ -67,6 +78,7 @@ export async function POST(request: Request) {
     });
 
     await dispatchEmailEvent("PAYMENT_CONFIRMED", { orderId: updatedOrder.id });
+    await createShiprocketOrderAfterPayment(updatedOrder.id);
   }
 
   if (event.event === "payment.failed") {

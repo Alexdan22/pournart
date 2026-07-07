@@ -40,6 +40,11 @@ export default async function AdminProductionPage() {
         totalLabel: formatINR(order.total),
         createdAtLabel: order.createdAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
         status: order.status,
+        shiprocketShipmentId: order.shiprocketShipmentId,
+        awbCode: order.awbCode,
+        courierName: order.courierName,
+        shipmentStatus: order.shipmentStatus,
+        shipmentError: order.shipmentError,
       })),
   }));
   const blockedCount = orders.filter((order) => order.paymentStatus === "FAILED" || order.paymentStatus === "PENDING").length;

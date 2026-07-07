@@ -1,12 +1,29 @@
 import type { Metadata } from "next";
+import { JsonLd } from "@/components/json-ld";
 import { CTA, FAQAccordion, PageHero } from "@/components/business";
 import { businessMetadata, faqCategories } from "@/lib/business-content";
 
 export const metadata: Metadata = businessMetadata.faq;
 
 export default function FAQPage() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqCategories.flatMap((category) =>
+      category.items.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer,
+        },
+      })),
+    ),
+  };
+
   return (
     <>
+      <JsonLd id="faq-json-ld" data={faqJsonLd} />
       <PageHero
         eyebrow="FAQ"
         title="Helpful answers before your piece is made."

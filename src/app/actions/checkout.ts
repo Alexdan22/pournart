@@ -3,17 +3,19 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { CartPricingError, checkoutItemSchema, craftingDaysForProducts, priceCheckoutCart } from "@/lib/cart-pricing";
 import { prisma } from "@/lib/db";
 import { dispatchEmailEvent } from "@/lib/email";
 import { getRazorpayClient, isRazorpayConfigured } from "@/lib/razorpay";
 import { requireUser } from "@/lib/session";
+import {
+  applyCraftingTimeToCourier,
+  calculateShippingRate,
+  createShiprocketOrderAfterPayment,
+  isShiprocketConfigured,
+  shiprocketErrorMessage,
+} from "@/lib/shiprocket";
 import type { ActionState } from "@/lib/types";
-
-const checkoutItemSchema = z.object({
-  productId: z.string().min(1),
-  quantity: z.coerce.number().int().min(1).max(20),
-  customization: z.record(z.string(), z.string()).default({}),
-});
 
 const checkoutSchema = z.object({
   cart: z.array(checkoutItemSchema).min(1, "Your cart is empty."),
@@ -23,7 +25,8 @@ const checkoutSchema = z.object({
   deliveryLine2: z.string().optional(),
   deliveryCity: z.string().min(2, "Enter a city."),
   deliveryState: z.string().min(2, "Enter a state."),
-  deliveryPincode: z.string().min(5, "Enter a pincode."),
+  deliveryPincode: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-digit pincode."),
+  selectedCourierCompanyId: z.coerce.number().int().positive("Select a courier option."),
   deliveryAddressLabel: z.string().min(2).max(30).default("Home"),
   saveAddress: z.boolean().default(true),
   customNotes: z.string().optional(),
@@ -89,6 +92,7 @@ export async function createOrderAction(
     deliveryCity: formData.get("deliveryCity"),
     deliveryState: formData.get("deliveryState"),
     deliveryPincode: formData.get("deliveryPincode"),
+    selectedCourierCompanyId: formData.get("selectedCourierCompanyId"),
     deliveryAddressLabel: formData.get("deliveryAddressLabel") || "Home",
     saveAddress: formData.get("saveAddress") === "on" || formData.get("saveAddress") === "true",
     customNotes: formData.get("customNotes") || "",
@@ -101,41 +105,46 @@ export async function createOrderAction(
     };
   }
 
-  const productIds = parsed.data.cart.map((item) => item.productId);
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds }, isActive: true },
-    include: { category: true },
-  });
-  const productById = new Map(products.map((product) => [product.id, product]));
+  let pricedCart: Awaited<ReturnType<typeof priceCheckoutCart>>;
 
-  if (products.length !== new Set(productIds).size) {
-    return { message: "Some products in your cart are no longer available." };
-  }
-
-  let subtotal = 0;
-  const orderItems = parsed.data.cart.map((item) => {
-    const product = productById.get(item.productId);
-
-    if (!product) {
-      throw new Error(`Missing product ${item.productId}`);
+  try {
+    pricedCart = await priceCheckoutCart(parsed.data.cart);
+  } catch (error) {
+    if (error instanceof CartPricingError) {
+      return { message: error.message };
     }
 
-    subtotal += product.price * item.quantity;
-    return {
-      productId: product.id,
-      productName: product.name,
-      productImageUrl: product.imageUrl,
-      unitPrice: product.price,
-      quantity: item.quantity,
-      customization: JSON.stringify(item.customization),
-    };
+    throw error;
+  }
+
+  if (!isShiprocketConfigured()) {
+    return { message: "Delivery rates are being configured. Please contact the studio before checkout." };
+  }
+
+  let shippingQuote: Awaited<ReturnType<typeof calculateShippingRate>>;
+
+  try {
+    shippingQuote = await calculateShippingRate({
+      deliveryPincode: parsed.data.deliveryPincode,
+      declaredValue: pricedCart.subtotal,
+    });
+  } catch (error) {
+    return { message: shiprocketErrorMessage(error) };
+  }
+
+  const selectedCourier = shippingQuote.options.find((option) => {
+    return option.courierCompanyId === parsed.data.selectedCourierCompanyId;
   });
 
-  const shippingFee = products
-    .filter((product, index, allProducts) => {
-      return allProducts.findIndex((candidate) => candidate.categoryId === product.categoryId) === index;
-    })
-    .reduce((total, product) => total + product.category.shippingFee, 0);
+  if (!shippingQuote.serviceable || !selectedCourier) {
+    return { message: "Please check delivery again and select an available courier option." };
+  }
+
+  const craftingDays = craftingDaysForProducts(pricedCart.products);
+  const selectedShipping = applyCraftingTimeToCourier(selectedCourier, craftingDays.max);
+
+  const subtotal = pricedCart.subtotal;
+  const shippingFee = selectedShipping.freightCharge;
   const total = subtotal + shippingFee;
   const orderNumber = buildOrderNumber();
 
@@ -154,6 +163,7 @@ export async function createOrderAction(
       userId: session.id,
       subtotal,
       shippingFee,
+      shippingCharge: shippingFee,
       total,
       customNotes: parsed.data.customNotes || null,
       deliveryName: parsed.data.deliveryName,
@@ -163,7 +173,12 @@ export async function createOrderAction(
       deliveryCity: parsed.data.deliveryCity,
       deliveryState: parsed.data.deliveryState,
       deliveryPincode: parsed.data.deliveryPincode,
-      items: { create: orderItems },
+      courierCompanyId: selectedShipping.courierCompanyId,
+      courierName: selectedShipping.courierName,
+      pickupPincode: shippingQuote.pickupPincode,
+      estimatedDelivery: selectedShipping.estimatedDeliveryDate,
+      shipmentStatus: "SERVICEABLE",
+      items: { create: pricedCart.orderItems },
       timeline: {
         create: {
           status: "ORDER_RECEIVED",
@@ -182,7 +197,7 @@ export async function createOrderAction(
       sessionId: String(formData.get("analyticsSessionId") || "") || null,
       userId: session.id,
       orderId: order.id,
-      metadata: JSON.stringify({ total, subtotal, itemCount: orderItems.length }),
+      metadata: JSON.stringify({ total, subtotal, shippingFee, itemCount: pricedCart.orderItems.length }),
     },
   });
 
@@ -256,5 +271,6 @@ export async function markLocalPaymentPaidAction(formData: FormData) {
   });
 
   await dispatchEmailEvent("PAYMENT_CONFIRMED", { orderId: updatedOrder.id });
+  await createShiprocketOrderAfterPayment(updatedOrder.id);
   redirect(`/orders/${updatedOrder.orderNumber}`);
 }

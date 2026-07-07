@@ -518,6 +518,7 @@ export async function updateOrderAction(formData: FormData) {
   const paymentStatus = z.enum(PAYMENT_STATUSES).parse(formData.get("paymentStatus"));
   const orderId = String(formData.get("orderId") || "");
   const note = String(formData.get("note") || getDefaultOrderStatusNote(status));
+  const courierTrackingId = String(formData.get("courierTrackingId") || "");
   const courierTrackingUrl = String(formData.get("courierTrackingUrl") || "");
 
   const order = await prisma.order.update({
@@ -526,8 +527,10 @@ export async function updateOrderAction(formData: FormData) {
       status,
       paymentStatus,
       courierName: String(formData.get("courierName") || "") || null,
-      courierTrackingId: String(formData.get("courierTrackingId") || "") || null,
+      courierTrackingId: courierTrackingId || null,
       courierTrackingUrl: courierTrackingUrl || null,
+      awbCode: courierTrackingId || null,
+      trackingUrl: courierTrackingUrl || null,
       shippedAt: status === "SHIPPED" ? new Date() : undefined,
       deliveredAt: status === "DELIVERED" ? new Date() : undefined,
       timeline: {

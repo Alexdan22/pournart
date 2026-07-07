@@ -1,9 +1,18 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowRight, Heart } from "lucide-react";
 import { AccountNav } from "@/components/account-nav";
 import { ProductCard } from "@/components/product-card";
 import { prisma } from "@/lib/db";
+import { createMetadata } from "@/lib/seo";
 import { requireUser } from "@/lib/session";
+
+export const metadata: Metadata = createMetadata({
+  title: "Wishlist",
+  description: "Private Pour n Art wishlist.",
+  path: "/wishlist",
+  noIndex: true,
+});
 
 export default async function WishlistPage() {
   const session = await requireUser();

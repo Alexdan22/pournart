@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createMetadata } from "@/lib/seo";
 
 export type BusinessAction = {
   label: string;
@@ -32,16 +33,28 @@ export type PolicyContent = {
 
 export const businessMetadata = {
   about: {
-    title: "About Pour n Art | Handcrafted Custom Gifts",
-    description: "Meet Pour n Art, a boutique studio creating handcrafted custom gifts and keepsake resin pieces.",
+    ...createMetadata({
+      title: "About Pour n Art",
+      description: "Meet Pour n Art, a boutique studio creating handcrafted custom gifts and keepsake resin pieces.",
+      path: "/about",
+      image: "/assets/optimized/resin-hero-home.webp",
+    }),
   },
   contact: {
-    title: "Contact Pour n Art | Custom Gift Requests",
-    description: "Start a custom Pour n Art gift request or reach the studio by email, WhatsApp, or Instagram.",
+    ...createMetadata({
+      title: "Contact Pour n Art",
+      description: "Start a custom Pour n Art gift request or reach the studio by email, WhatsApp, or Instagram.",
+      path: "/contact",
+      image: "/assets/optimized/personal-keepsakes-home.webp",
+    }),
   },
   faq: {
-    title: "FAQ | Pour n Art",
-    description: "Helpful answers about Pour n Art orders, custom pieces, shipping, returns, and product care.",
+    ...createMetadata({
+      title: "FAQ",
+      description: "Helpful answers about Pour n Art orders, custom pieces, shipping, returns, and product care.",
+      path: "/faq",
+      image: "/assets/optimized/resin-coasters-blue-home.webp",
+    }),
   },
 } satisfies Record<string, Metadata>;
 
@@ -202,8 +215,12 @@ export const faqCategories: FAQCategory[] = [
 export const policyPages = {
   shipping: {
     metadata: {
-      title: "Shipping Policy | Pour n Art",
-      description: "Placeholder shipping policy for Pour n Art handcrafted custom gifts.",
+      ...createMetadata({
+        title: "Shipping Policy",
+        description: "Placeholder shipping policy for Pour n Art handcrafted custom gifts.",
+        path: "/shipping-policy",
+        image: "/assets/optimized/resin-tray-home.webp",
+      }),
     },
     eyebrow: "Shipping Policy",
     title: "Shipping, made clear and careful.",
@@ -239,8 +256,12 @@ export const policyPages = {
   },
   returnRefund: {
     metadata: {
-      title: "Return & Refund Policy | Pour n Art",
-      description: "Placeholder return and refund policy for Pour n Art handmade and custom pieces.",
+      ...createMetadata({
+        title: "Return & Refund Policy",
+        description: "Placeholder return and refund policy for Pour n Art handmade and custom pieces.",
+        path: "/return-refund-policy",
+        image: "/assets/optimized/resin-coasters-card.webp",
+      }),
     },
     eyebrow: "Return & Refund Policy",
     title: "Support for orders that need a second look.",
@@ -276,8 +297,12 @@ export const policyPages = {
   },
   privacy: {
     metadata: {
-      title: "Privacy Policy | Pour n Art",
-      description: "Placeholder privacy policy for Pour n Art customer and order information.",
+      ...createMetadata({
+        title: "Privacy Policy",
+        description: "Placeholder privacy policy for Pour n Art customer and order information.",
+        path: "/privacy-policy",
+        image: "/assets/optimized/personal-keepsakes-home.webp",
+      }),
     },
     eyebrow: "Privacy Policy",
     title: "Your details are handled with care.",
@@ -318,8 +343,12 @@ export const policyPages = {
   },
   terms: {
     metadata: {
-      title: "Terms & Conditions | Pour n Art",
-      description: "Placeholder terms and conditions for Pour n Art website orders and custom gifts.",
+      ...createMetadata({
+        title: "Terms & Conditions",
+        description: "Placeholder terms and conditions for Pour n Art website orders and custom gifts.",
+        path: "/terms-and-conditions",
+        image: "/assets/optimized/resin-idol-home.webp",
+      }),
     },
     eyebrow: "Terms & Conditions",
     title: "A simple guide to using the studio shop.",

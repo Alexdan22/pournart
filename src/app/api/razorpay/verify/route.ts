@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dispatchEmailEvent } from "@/lib/email";
 import { getRazorpayClient, verifyCheckoutSignature } from "@/lib/razorpay";
+import { createShiprocketOrderAfterPayment } from "@/lib/shiprocket";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -37,6 +38,17 @@ export async function POST(request: Request) {
 
   const razorpay = getRazorpayClient();
 
+  if (razorpay) {
+    const razorpayOrder = (await razorpay.orders.fetch(razorpayOrderId)) as {
+      amount?: number | string;
+      currency?: string;
+    };
+
+    if (Number(razorpayOrder.amount) !== order.total || razorpayOrder.currency !== "INR") {
+      return NextResponse.json({ error: "Payment amount does not match the order total." }, { status: 400 });
+    }
+  }
+
   if (razorpay && process.env.RAZORPAY_CAPTURE_ON_VERIFY === "true") {
     await razorpay.payments.capture(razorpayPaymentId, order.total, "INR");
   }
@@ -69,6 +81,7 @@ export async function POST(request: Request) {
   });
 
   await dispatchEmailEvent("PAYMENT_CONFIRMED", { orderId: updatedOrder.id });
+  await createShiprocketOrderAfterPayment(updatedOrder.id);
 
   return NextResponse.json({
     ok: true,

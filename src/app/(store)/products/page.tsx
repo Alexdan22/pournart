@@ -1,17 +1,60 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Camera, Grid3X3, Search } from "lucide-react";
+import type { Metadata } from "next";
+import { Camera, Grid3X3, Search, ShoppingBag } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import { getActiveCategories } from "@/lib/catalog";
 import { prisma } from "@/lib/db";
 import { warmDisplayCopy } from "@/lib/product-positioning";
+import { createMetadata } from "@/lib/seo";
 import { getSession } from "@/lib/session";
+
+type ProductsPageProps = {
+  searchParams: Promise<{ category?: string; q?: string }>;
+};
+
+export async function generateMetadata({ searchParams }: ProductsPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const query = params.q?.trim();
+
+  if (query) {
+    return createMetadata({
+      title: `Search results for ${query}`,
+      description: `Browse Pour n Art handmade gift search results for ${query}.`,
+      path: `/products?q=${encodeURIComponent(query)}`,
+      noIndex: true,
+    });
+  }
+
+  if (params.category) {
+    const category = await prisma.category.findFirst({
+      where: { slug: params.category, isActive: true },
+      select: { name: true, description: true, imageUrl: true, slug: true, metaTitle: true, metaDescription: true },
+    });
+
+    if (category) {
+      return createMetadata({
+        title: category.metaTitle || `${warmDisplayCopy(category.name)} Collection`,
+        description: category.metaDescription || category.description,
+        path: `/products?category=${category.slug}`,
+        image: category.imageUrl || "/assets/optimized/resin-hero-home.webp",
+        keywords: [category.name, warmDisplayCopy(category.name), "custom gifts"],
+      });
+    }
+  }
+
+  return createMetadata({
+    title: "Shop Handcrafted Custom Gifts",
+    description: "Browse Pour n Art handmade resin gifts, personalized keepsakes, trays, coasters, decor, and custom gift collections.",
+    path: "/products",
+    image: "/assets/optimized/resin-coasters-card.webp",
+    keywords: ["shop custom gifts", "resin art products", "personalized gifts"],
+  });
+}
 
 export default async function ProductsPage({
   searchParams,
-}: {
-  searchParams: Promise<{ category?: string; q?: string }>;
-}) {
+}: ProductsPageProps) {
   const params = await searchParams;
   const session = await getSession();
   const categories = await getActiveCategories();
@@ -108,6 +151,16 @@ export default async function ProductsPage({
           />
         ))}
       </div>
+      {products.length === 0 ? (
+        <div className="empty-state soft-empty">
+          <ShoppingBag aria-hidden size={34} />
+          <h2>No pieces found.</h2>
+          <p>Try another collection or send the studio a custom gift idea.</p>
+          <Link className="primary-button" href="/contact">
+            Start a custom request
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

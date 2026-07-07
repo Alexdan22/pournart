@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -15,12 +16,39 @@ import {
 } from "lucide-react";
 import { AddToCartForm } from "@/components/add-to-cart-form";
 import { AnalyticsBeacon } from "@/components/analytics-beacon";
+import { JsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { getProductBySlug, parseCustomizationFields } from "@/lib/catalog";
 import { defaultWhatsAppMessage } from "@/lib/constants";
 import { prisma } from "@/lib/db";
 import { formatINR } from "@/lib/money";
 import { getProductValueLabel, warmDisplayCopy } from "@/lib/product-positioning";
+import { absoluteUrl, createMetadata, siteConfig } from "@/lib/seo";
+
+export async function generateMetadata(props: PageProps<"/products/[slug]">): Promise<Metadata> {
+  const { slug } = await props.params;
+  const product = await getProductBySlug(slug);
+
+  if (!product || !product.isActive) {
+    return createMetadata({
+      title: "Product Not Found",
+      description: "This Pour n Art product is not available.",
+      path: `/products/${slug}`,
+      noIndex: true,
+    });
+  }
+
+  const displayName = warmDisplayCopy(product.name);
+  const description = warmDisplayCopy(product.description);
+
+  return createMetadata({
+    title: displayName,
+    description,
+    path: `/products/${product.slug}`,
+    image: product.imageUrl,
+    keywords: [displayName, product.category.name, "handmade resin gift", "custom gift"],
+  });
+}
 
 export default async function ProductDetailPage(props: PageProps<"/products/[slug]">) {
   const { slug } = await props.params;
@@ -126,10 +154,87 @@ export default async function ProductDetailPage(props: PageProps<"/products/[slu
       answer: "Yes. Use the WhatsApp inquiry option or the custom gifts page to share your idea, budget, and timeline.",
     },
   ];
+  const averageRating = approvedReviews.length
+    ? approvedReviews.reduce((total, review) => total + review.rating, 0) / approvedReviews.length
+    : null;
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": absoluteUrl(`/products/${product.slug}#product`),
+    name: displayName,
+    description: displayDescription,
+    image: [absoluteUrl(product.imageUrl)],
+    brand: {
+      "@type": "Brand",
+      name: siteConfig.name,
+    },
+    category: warmDisplayCopy(product.category.name),
+    sku: product.id,
+    offers: {
+      "@type": "Offer",
+      url: absoluteUrl(`/products/${product.slug}`),
+      priceCurrency: "INR",
+      price: (product.price / 100).toFixed(2),
+      availability: product.inventory > 0 ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+      itemCondition: "https://schema.org/NewCondition",
+      seller: {
+        "@id": absoluteUrl("/#organization"),
+      },
+    },
+    ...(averageRating
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Number(averageRating.toFixed(1)),
+            reviewCount: approvedReviews.length,
+          },
+        }
+      : {}),
+  };
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: absoluteUrl("/"),
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Products",
+        item: absoluteUrl("/products"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: displayName,
+        item: absoluteUrl(`/products/${product.slug}`),
+      },
+    ],
+  };
 
   return (
-    <section className="product-detail">
-      <AnalyticsBeacon event="PRODUCT_VIEWED" productId={product.id} metadata={{ slug: product.slug }} />
+    <>
+      <JsonLd id="product-json-ld" data={productJsonLd} />
+      <JsonLd id="product-faq-json-ld" data={faqJsonLd} />
+      <JsonLd id="product-breadcrumb-json-ld" data={breadcrumbJsonLd} />
+      <section className="product-detail">
+        <AnalyticsBeacon event="PRODUCT_VIEWED" productId={product.id} metadata={{ slug: product.slug }} />
       <Link className="text-link" href="/products">
         <ArrowLeft aria-hidden size={16} /> Back to collections
       </Link>
@@ -295,6 +400,7 @@ export default async function ProductDetailPage(props: PageProps<"/products/[slu
           </div>
         </section>
       ) : null}
-    </section>
+      </section>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, PackageCheck } from "lucide-react";
 import { AccountNav } from "@/components/account-nav";
 import { getOrderStatusLabel, paymentStatusLabel } from "@/lib/constants";
 import { prisma } from "@/lib/db";
@@ -29,6 +30,16 @@ export default async function OrdersPage() {
           </Link>
         ))}
       </div>
+      {orders.length === 0 ? (
+        <div className="empty-state soft-empty">
+          <PackageCheck aria-hidden size={34} />
+          <h2>No orders yet.</h2>
+          <p>Your crafting journey will appear here after checkout.</p>
+          <Link className="primary-button" href="/products">
+            Shop gifts <ArrowRight aria-hidden size={18} />
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

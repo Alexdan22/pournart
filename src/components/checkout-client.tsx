@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
-import { ArrowRight, CreditCard, MapPin, Plus, ShoppingBag } from "lucide-react";
+import { ArrowRight, CheckCircle2, CreditCard, Loader2, MapPin, Plus, ShoppingBag, Truck } from "lucide-react";
 import { createOrderAction } from "@/app/actions/checkout";
 import { useCart } from "@/components/cart-provider";
 import { trackAnalyticsEvent } from "@/lib/analytics-client";
@@ -43,6 +43,35 @@ type DeliveryFields = {
   deliveryAddressLabel: string;
 };
 
+type ShippingCourierOption = {
+  courierCompanyId: number;
+  courierName: string | null;
+  recommended: boolean;
+  freightCharge: number;
+  freightChargeLabel: string;
+  courierEstimatedDelivery: string | null;
+  estimatedDelivery: string | null;
+  estimatedDeliveryDate: string;
+  transitDays: number | null;
+};
+
+type ShippingQuote = {
+  serviceable: boolean;
+  pincode: string;
+  cartKey: string;
+  craftingDays: {
+    min: number;
+    max: number;
+  };
+  courierCompanyId: number | null;
+  courierName: string | null;
+  estimatedDelivery: string | null;
+  freightCharge: number;
+  freightChargeLabel: string;
+  pickupPincode: string;
+  options: ShippingCourierOption[];
+};
+
 function addressLine(address: SavedAddress) {
   return [address.line1, address.line2, address.city, address.state, address.pincode]
     .filter(Boolean)
@@ -55,6 +84,10 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
   const firstAddress = savedAddresses[0];
   const [selectedAddressId, setSelectedAddressId] = useState(firstAddress?.id ?? "new");
   const [saveAddress, setSaveAddress] = useState(true);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
+  const [selectedCourierCompanyId, setSelectedCourierCompanyId] = useState<number | null>(null);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingError, setShippingError] = useState("");
   const [delivery, setDelivery] = useState<DeliveryFields>({
     deliveryName: user.name,
     deliveryPhone: user.phone,
@@ -70,6 +103,19 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
     quantity: item.quantity,
     customization: item.customization,
   }));
+  const cartJson = JSON.stringify(cartPayload);
+  const deliveryPincode = delivery.deliveryPincode.trim();
+  const pincodeIsValid = /^\d{6}$/.test(deliveryPincode);
+  const quoteMatchesCart = Boolean(
+    shippingQuote?.serviceable && shippingQuote.pincode === deliveryPincode && shippingQuote.cartKey === cartJson,
+  );
+  const selectedShippingOption =
+    quoteMatchesCart && selectedCourierCompanyId
+      ? shippingQuote?.options.find((option) => option.courierCompanyId === selectedCourierCompanyId) ?? null
+      : null;
+  const quoteIsCurrent = Boolean(selectedShippingOption);
+  const shippingCharge = selectedShippingOption?.freightCharge ?? 0;
+  const payableTotal = subtotal + shippingCharge;
 
   useEffect(() => {
     if (items.length > 0) {
@@ -83,12 +129,69 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
   }, [items.length, subtotal]);
 
   function updateDeliveryField(field: keyof DeliveryFields, value: string) {
+    if (field === "deliveryPincode") {
+      setShippingQuote(null);
+      setSelectedCourierCompanyId(null);
+      setShippingError("");
+    }
+
     setDelivery((current) => ({ ...current, [field]: value }));
+  }
+
+  async function checkDelivery() {
+    setShippingError("");
+    setShippingQuote(null);
+    setSelectedCourierCompanyId(null);
+
+    if (!pincodeIsValid) {
+      setShippingError("Enter a valid 6-digit delivery pincode.");
+      return;
+    }
+
+    setShippingLoading(true);
+
+    try {
+      const response = await fetch("/api/shipping/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pincode: deliveryPincode,
+          cart: cartPayload,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Delivery check failed.");
+      }
+
+      if (!data.serviceable) {
+        setShippingError("This pincode is not serviceable yet.");
+        return;
+      }
+
+      const nextQuote = { ...(data as Omit<ShippingQuote, "cartKey">), cartKey: cartJson };
+
+      if (!nextQuote.options.length) {
+        setShippingError("No courier options are available for this pincode yet.");
+        return;
+      }
+
+      setShippingQuote(nextQuote);
+      setSelectedCourierCompanyId(nextQuote.courierCompanyId ?? nextQuote.options[0]?.courierCompanyId ?? null);
+    } catch (error) {
+      setShippingError(error instanceof Error ? error.message : "Delivery check failed.");
+    } finally {
+      setShippingLoading(false);
+    }
   }
 
   function selectSavedAddress(address: SavedAddress) {
     setSelectedAddressId(address.id);
     setSaveAddress(true);
+    setShippingQuote(null);
+    setSelectedCourierCompanyId(null);
+    setShippingError("");
     setDelivery((current) => ({
       ...current,
       deliveryLine1: address.line1,
@@ -103,6 +206,9 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
   function selectNewAddress() {
     setSelectedAddressId("new");
     setSaveAddress(true);
+    setShippingQuote(null);
+    setSelectedCourierCompanyId(null);
+    setShippingError("");
     setDelivery((current) => ({
       ...current,
       deliveryLine1: "",
@@ -134,7 +240,8 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
           <span className="panel-label">Logged in as {user.name}</span>
           <h1>Delivery details</h1>
         </div>
-        <input type="hidden" name="cartJson" value={JSON.stringify(cartPayload)} />
+        <input type="hidden" name="cartJson" value={cartJson} />
+        <input type="hidden" name="selectedCourierCompanyId" value={selectedCourierCompanyId ?? ""} />
         {savedAddresses.length > 0 ? (
           <section className="checkout-address-book" aria-label="Saved addresses">
             <div className="mini-heading">
@@ -262,12 +369,70 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
             <input
               name="deliveryPincode"
               autoComplete="postal-code"
-              onChange={(event) => updateDeliveryField("deliveryPincode", event.target.value)}
+              inputMode="numeric"
+              maxLength={6}
+              onChange={(event) => updateDeliveryField("deliveryPincode", event.target.value.replace(/\D/g, "").slice(0, 6))}
               required
               value={delivery.deliveryPincode}
             />
           </label>
         </div>
+        <section className="shipping-check-panel" aria-live="polite">
+          <div className="shipping-check-heading">
+            <Truck aria-hidden size={18} />
+            <span>
+              <strong>Shiprocket delivery check</strong>
+              <small>Confirm serviceability before payment.</small>
+            </span>
+          </div>
+          <button
+            className="secondary-button shipping-check-button"
+            disabled={shippingLoading || !pincodeIsValid}
+            onClick={checkDelivery}
+            type="button"
+          >
+            {shippingLoading ? <Loader2 aria-hidden className="spin" size={17} /> : <MapPin aria-hidden size={17} />}
+            Check Delivery
+          </button>
+          {shippingError ? <p className="form-message shipping-status-message">{shippingError}</p> : null}
+          {quoteMatchesCart && shippingQuote ? (
+            <div className="shipping-option-list" role="radiogroup" aria-label="Available courier options">
+              {shippingQuote.options.map((option) => {
+                const selected = selectedCourierCompanyId === option.courierCompanyId;
+
+                return (
+                  <label className={selected ? "shipping-option-card selected" : "shipping-option-card"} key={option.courierCompanyId}>
+                    <input
+                      checked={selected}
+                      name="shippingCourierChoice"
+                      onChange={() => setSelectedCourierCompanyId(option.courierCompanyId)}
+                      type="radio"
+                      value={option.courierCompanyId}
+                    />
+                    <span className="shipping-option-copy">
+                      <strong>
+                        {selected ? <CheckCircle2 aria-hidden size={17} /> : <Truck aria-hidden size={17} />}
+                        {option.courierName || "Serviceable courier"}
+                        {option.recommended ? <em>Recommended</em> : null}
+                      </strong>
+                      <small>
+                        {option.freightChargeLabel}
+                        {option.estimatedDelivery ? ` / ETA ${option.estimatedDelivery}` : ""}
+                      </small>
+                      <small>
+                        Includes up to {shippingQuote.craftingDays.max} crafting days
+                        {option.transitDays ? ` + ${option.transitDays} courier days` : ""}.
+                      </small>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+          {!quoteMatchesCart && !shippingError ? (
+            <p className="summary-note">Payment unlocks after this pincode is serviceable.</p>
+          ) : null}
+        </section>
         <label className="check-row save-address-row">
           <input
             checked={saveAddress}
@@ -282,9 +447,9 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
           <textarea name="customNotes" placeholder="Timeline, gifting date, reference idea, preferred delivery notes" />
         </label>
         {state.message ? <p className="form-message">{state.message}</p> : null}
-        <button className="primary-button" disabled={pending} type="submit">
+        <button className="primary-button" disabled={pending || !quoteIsCurrent} type="submit">
           <CreditCard aria-hidden size={18} />
-          Continue to payment
+          {quoteIsCurrent ? "Continue to payment" : "Check delivery to continue"}
         </button>
       </form>
 
@@ -310,7 +475,19 @@ export function CheckoutClient({ user, savedAddresses }: CheckoutClientProps) {
           <span>Subtotal</span>
           <strong>{formatINR(subtotal)}</strong>
         </div>
-        <p className="summary-note">Category-based delivery charges are calculated on order creation.</p>
+        <div className="summary-total">
+          <span>Shipping</span>
+          <strong>{selectedShippingOption ? selectedShippingOption.freightChargeLabel : "Check pincode"}</strong>
+        </div>
+        <div className="summary-total grand">
+          <span>Total</span>
+          <strong>{formatINR(payableTotal)}</strong>
+        </div>
+        <p className="summary-note">
+          {quoteIsCurrent && shippingQuote
+            ? `${selectedShippingOption?.courierName || "Courier"} selected for ${deliveryPincode}. ETA includes crafting time.`
+            : "Delivery charges update after Shiprocket confirms serviceability."}
+        </p>
       </aside>
     </section>
   );

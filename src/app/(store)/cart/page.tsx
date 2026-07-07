@@ -72,7 +72,7 @@ export default function CartPage() {
             <span>Subtotal</span>
             <strong>{formatINR(subtotal)}</strong>
           </div>
-          <p className="summary-note">Shipping is category-based and calculated at checkout.</p>
+          <p className="summary-note">Shipping is checked by pincode at checkout and recalculated securely before payment.</p>
           <Link className="primary-button" href="/checkout">
             Checkout <ArrowRight aria-hidden size={18} />
           </Link>

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Heart, KeyRound, Menu, UserRound, X } from "lucide-react";
+import { Heart, KeyRound, UserRound } from "lucide-react";
 import { CartLink } from "@/components/cart-link";
+import { MobileNavMenu, type MobileNavLink } from "@/components/mobile-nav-menu";
 import { getSession } from "@/lib/session";
 
 export async function SiteHeader() {
   const session = await getSession();
-  const navLinks = [
+  const navLinks: MobileNavLink[] = [
     { href: "/", label: "Home" },
     { href: "/products", label: "Shop" },
     { href: "/contact", label: "Custom Gifts", featured: true },
@@ -18,19 +19,7 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header">
-      <details className="mobile-nav-menu">
-        <summary className="mobile-nav-toggle" aria-label="Toggle navigation">
-          <Menu className="mobile-nav-open-icon" aria-hidden size={20} />
-          <X className="mobile-nav-close-icon" aria-hidden size={20} />
-        </summary>
-        <nav className="mobile-nav-panel" aria-label="Mobile navigation">
-          {navLinks.map((link) => (
-            <Link className={link.featured ? "nav-featured" : undefined} href={link.href} key={link.href}>
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-      </details>
+      <MobileNavMenu links={navLinks} />
 
       <Link className="brand-mark" href="/" aria-label="Pour n Art home">
         <span className="brand-emblem">

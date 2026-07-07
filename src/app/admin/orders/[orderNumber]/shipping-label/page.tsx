@@ -35,7 +35,7 @@ export default async function AdminShippingLabelPage(props: PageProps<"/admin/or
       </div>
       <div className="shipping-label-box">
         <span>Courier</span>
-        <p>{order.courierName || "To be assigned"}<br />{order.courierTrackingId || "Tracking pending"}</p>
+        <p>{order.courierName || "To be assigned"}<br />{order.awbCode || order.courierTrackingId || "Tracking pending"}</p>
       </div>
     </section>
   );

@@ -19,6 +19,7 @@ import {
   sendManualOrderEmailAction,
   updateOrderAction,
 } from "@/app/actions/admin";
+import { AdminShiprocketPanel } from "@/components/admin-shiprocket-panel";
 import { CopyButton } from "@/components/copy-button";
 import { ORDER_STATUSES, PAYMENT_STATUSES, adminOrderStatusLabel, paymentStatusLabel } from "@/lib/constants";
 import { prisma } from "@/lib/db";
@@ -65,7 +66,7 @@ export default async function AdminOrderDetailPage(props: PageProps<"/admin/orde
           <Link className="admin-button" href={`/admin/orders/${order.orderNumber}/shipping-label`}>
             <Truck aria-hidden size={16} /> Shipping Label
           </Link>
-          {order.courierTrackingId ? <CopyButton value={order.courierTrackingId} label="Copy Tracking" /> : null}
+          {order.awbCode || order.courierTrackingId ? <CopyButton value={order.awbCode || order.courierTrackingId || ""} label="Copy Tracking" /> : null}
         </div>
       </div>
 
@@ -195,7 +196,8 @@ export default async function AdminOrderDetailPage(props: PageProps<"/admin/orde
           </div>
           <dl className="admin-definition-list">
             <dt>Partner</dt><dd>{order.courierName || "Not set"}</dd>
-            <dt>Tracking ID</dt><dd>{order.courierTrackingId || "Not set"}</dd>
+            <dt>Tracking ID</dt><dd>{order.awbCode || order.courierTrackingId || "Not set"}</dd>
+            <dt>Shiprocket</dt><dd>{order.shiprocketShipmentId || "Not created"}</dd>
             <dt>Shipped</dt><dd>{order.shippedAt?.toLocaleString("en-IN") || "Not shipped"}</dd>
             <dt>Delivered</dt><dd>{order.deliveredAt?.toLocaleString("en-IN") || "Not delivered"}</dd>
           </dl>
@@ -207,6 +209,23 @@ export default async function AdminOrderDetailPage(props: PageProps<"/admin/orde
             </button>
           </form>
         </section>
+
+        <AdminShiprocketPanel
+          order={{
+            id: order.id,
+            paymentStatus: order.paymentStatus,
+            shiprocketOrderId: order.shiprocketOrderId,
+            shiprocketShipmentId: order.shiprocketShipmentId,
+            awbCode: order.awbCode,
+            courierCompanyId: order.courierCompanyId,
+            courierName: order.courierName,
+            shipmentStatus: order.shipmentStatus,
+            trackingUrl: order.trackingUrl,
+            courierTrackingUrl: order.courierTrackingUrl,
+            pickupGenerated: order.pickupGenerated,
+            shipmentError: order.shipmentError,
+          }}
+        />
 
         <section className="admin-panel">
           <div className="admin-panel-heading">

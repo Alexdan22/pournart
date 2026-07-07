@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ExternalLink, PackageCheck } from "lucide-react";
+import { ExternalLink, PackageCheck, Truck } from "lucide-react";
 import { ReviewForm } from "@/components/review-form";
 import {
   customerJourneyStatuses,
@@ -12,6 +12,7 @@ import { prisma } from "@/lib/db";
 import { formatINR } from "@/lib/money";
 import { warmDisplayCopy } from "@/lib/product-positioning";
 import { requireUser } from "@/lib/session";
+import { parseTrackingEvents } from "@/lib/tracking-events";
 
 function timelineEntryTitle(entry: { status: string; title: string }) {
   const normalizedStatus = normalizeOrderStatus(entry.status);
@@ -52,6 +53,9 @@ export default async function OrderDetailPage(props: PageProps<"/orders/[orderNu
     ? (customerJourneyStatuses as readonly string[]).indexOf(normalizedStatus)
     : -1;
   const reviewByOrderItem = new Map(order.reviews.map((review) => [review.orderItemId, review]));
+  const trackingEvents = parseTrackingEvents(order.trackingEvents);
+  const awbCode = order.awbCode || order.courierTrackingId;
+  const trackingUrl = order.trackingUrl || order.courierTrackingUrl;
 
   return (
     <section className="order-detail">
@@ -82,13 +86,31 @@ export default async function OrderDetailPage(props: PageProps<"/orders/[orderNu
             <br />
             {order.deliveryCity}, {order.deliveryState} - {order.deliveryPincode}
           </p>
-          {order.courierTrackingUrl ? (
-            <a className="secondary-button" href={order.courierTrackingUrl} target="_blank" rel="noreferrer">
+          <dl className="shipment-meta">
+            <dt>Status</dt><dd>{order.shipmentStatus || "Preparing"}</dd>
+            <dt>Courier</dt><dd>{order.courierName || "To be assigned"}</dd>
+            <dt>AWB</dt><dd>{awbCode || "Pending"}</dd>
+          </dl>
+          {trackingUrl ? (
+            <a className="secondary-button" href={trackingUrl} target="_blank" rel="noreferrer">
               View shipment details <ExternalLink aria-hidden size={16} />
             </a>
           ) : (
             <p className="summary-note">Shipment or pickup details appear when your custom gift reaches that step.</p>
           )}
+          {trackingEvents.length > 0 ? (
+            <div className="shipment-timeline">
+              {trackingEvents.slice(0, 6).map((event, index) => (
+                <article key={`${event.date || "scan"}-${index}`}>
+                  <Truck aria-hidden size={15} />
+                  <span>
+                    <strong>{event.status || event.activity}</strong>
+                    <small>{[event.activity, event.location, event.date].filter(Boolean).join(" / ")}</small>
+                  </span>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </aside>
       </div>
 
