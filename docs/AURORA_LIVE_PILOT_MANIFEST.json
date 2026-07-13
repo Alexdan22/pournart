@@ -1,6 +1,6 @@
 {
-  "status": "locally-validated-external-actions-not-approved",
-  "recordedAt": "2026-07-13T06:25:00.000Z",
+  "status": "vps-pilot-active",
+  "recordedAt": "2026-07-13T07:28:31.271Z",
   "repositories": {
     "aurora": {
       "branch": "master",
@@ -9,6 +9,7 @@
     },
     "pourNArt": {
       "branch": "master",
+      "deployedCommit": "8b208c91091e341597244e3c3919d34269870dc1",
       "adapterCommit": "e0631a6",
       "productPanelCommit": "9ad632f",
       "catalogWorkflowCommit": "b3f1386",
@@ -33,8 +34,76 @@
     "sha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f"
   },
   "deployment": {
-    "target": "Render",
-    "featureFlagDefault": false,
-    "externalActionsApproved": false
+    "target": "VPS",
+    "sshHostAlias": "my_vps",
+    "applicationRoot": "/home/alex/pour-n-art",
+    "releasePath": "/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9",
+    "commit": "8b208c91091e341597244e3c3919d34269870dc1",
+    "processManager": "PM2",
+    "processName": "pour-n-art",
+    "environmentFile": "/home/alex/pour-n-art/shared/.env",
+    "environmentBackup": "/home/alex/pour-n-art/shared/.env.bak-before-aurora-activation-20260713-125141",
+    "rollbackRelease": "/home/alex/pour-n-art/releases/20260707-140449-shiprocket-f635983",
+    "featureFlagEnabled": true,
+    "allowlist": {
+      "selector": "stable-admin-user-id",
+      "entryCount": 1,
+      "reportedAdminId": "cmr6...qdg4"
+    },
+    "databaseMigrationRun": false,
+    "seedRun": false,
+    "resultPersistenceEnabled": false
+  },
+  "activationEvidence": {
+    "pm2": {
+      "pourNArtPidBefore": 138643,
+      "pourNArtPidAfter": 139393,
+      "unrelatedPidsUnchanged": true,
+      "unrelatedProcesses": {
+        "pullback": 134533,
+        "telegram-listener": 19571,
+        "webfoot-api": 19581
+      }
+    },
+    "health": {
+      "status": 200,
+      "ok": true,
+      "issueCodes": [],
+      "sdkVersion": "1.0.0-pilot.1",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "bundleSha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f",
+      "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52"
+    },
+    "authorization": {
+      "unauthenticatedDenied": true,
+      "nonAdminDenied": true,
+      "nonAllowlistedAdminDenied": true,
+      "allowlistedAdminAccepted": true,
+      "customerEndpointAbsent": true
+    },
+    "canary": {
+      "slug": "ocean-bloom-coaster-set",
+      "state": "success",
+      "decisionCount": 5,
+      "careGuidanceBlockingConstraintPresent": true,
+      "repeatedResponseEquivalent": true,
+      "inputFingerprint": "f633e83682ade3720a05e414eefce1d1a7dbe794e0f534c2cec1da0aeaf3663e",
+      "outputFingerprint": "1ee119e060729f7afd9f76ff4205a2e948048246cfe8983424f8cde49874e68e"
+    },
+    "remainingProducts": {
+      "evaluated": 7,
+      "successful": 7,
+      "partialFailures": 0,
+      "inputOrderPreserved": true,
+      "repeatedResponsesEquivalent": true
+    },
+    "safety": {
+      "allEightProductRowsUnchanged": true,
+      "auroraLogEventsAudited": 34,
+      "privacyForbiddenLogMatches": 0,
+      "storefrontHealthy": true,
+      "checkoutHealthy": true,
+      "adminHealthy": true
+    }
   }
 }
