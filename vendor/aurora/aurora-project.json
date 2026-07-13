@@ -1,0 +1,1023 @@
+{
+  "format": "aurora-project",
+  "version": 1,
+  "project": {
+    "id": "project.pna.catalog-intelligence-pilot",
+    "name": "Pour n Art Catalog Intelligence Pilot",
+    "description": "Human-reviewed deterministic catalog readiness intelligence for the Aurora Live Pilot.",
+    "sourceId": "source.pna.catalog-intelligence-pilot",
+    "metadata": {
+      "pilot": "aurora-live-sprints-51-55",
+      "reviewStatus": "approved",
+      "productCount": 8,
+      "semantics": "human-reviewed-no-inference"
+    }
+  },
+  "artifacts": [
+    {
+      "name": "Ocean-Inspired Gift Coaster Set",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.ocean-bloom-coaster-set",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.ocean-bloom-coaster-set",
+          "productType": "coaster-set",
+          "title": "Ocean-Inspired Gift Coaster Set",
+          "lifecycleStatus": "active",
+          "collection": "ocean-collection",
+          "slug": "ocean-bloom-coaster-set"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "compact",
+          "luxurySignal": "medium"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "moderate"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "medium",
+          "emotionalIntensity": "low"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "gift-ready"
+        },
+        "personalization": {
+          "customizable": false,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "low",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Botanical Welcome Name Plate",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.floral-ocean-name-plate",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.floral-ocean-name-plate",
+          "productType": "name-plate",
+          "title": "Botanical Welcome Name Plate",
+          "lifecycleStatus": "active",
+          "collection": "botanical-collection",
+          "slug": "floral-ocean-name-plate"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "statement",
+          "luxurySignal": "high"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "complex"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "high",
+          "emotionalIntensity": "medium"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "premium-gift-ready"
+        },
+        "personalization": {
+          "customizable": true,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "medium",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Blush Petal Memory Tray",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.blush-petal-resin-tray",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.blush-petal-resin-tray",
+          "productType": "decorative-tray",
+          "title": "Blush Petal Memory Tray",
+          "lifecycleStatus": "active",
+          "collection": "botanical-collection",
+          "slug": "blush-petal-resin-tray"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "medium",
+          "luxurySignal": "high"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "complex"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "high",
+          "emotionalIntensity": "medium"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "premium-gift-ready"
+        },
+        "personalization": {
+          "customizable": false,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "low",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Golden Aura Devotional Keepsake",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.golden-aura-devotional-keepsake",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.golden-aura-devotional-keepsake",
+          "productType": "devotional-keepsake",
+          "title": "Golden Aura Devotional Keepsake",
+          "lifecycleStatus": "active",
+          "collection": "home-collection",
+          "slug": "golden-aura-devotional-keepsake"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "compact",
+          "luxurySignal": "medium"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "moderate"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "medium",
+          "emotionalIntensity": "medium"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "gift-ready"
+        },
+        "personalization": {
+          "customizable": false,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "low",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Memory Keepsake Frame",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.memory-resin-frame",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.memory-resin-frame",
+          "productType": "keepsake-frame",
+          "title": "Memory Keepsake Frame",
+          "lifecycleStatus": "active",
+          "collection": "personalized-keepsakes",
+          "slug": "memory-resin-frame"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "medium",
+          "luxurySignal": "high"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "intricate"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "high",
+          "emotionalIntensity": "high"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "needs-preparation"
+        },
+        "personalization": {
+          "customizable": true,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "high",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Initial Charm Everyday Keepsake",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.initial-charm-keychain-pair",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.initial-charm-keychain-pair",
+          "productType": "keychain-pair",
+          "title": "Initial Charm Everyday Keepsake",
+          "lifecycleStatus": "active",
+          "collection": "wearables",
+          "slug": "initial-charm-keychain-pair"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "delicate",
+          "luxurySignal": "low"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "simple"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "medium",
+          "emotionalIntensity": "low"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "gift-ready"
+        },
+        "personalization": {
+          "customizable": true,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "low",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Custom Wedding Ring Platter",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.custom-wedding-ring-platter",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.custom-wedding-ring-platter",
+          "productType": "ring-platter",
+          "title": "Custom Wedding Ring Platter",
+          "lifecycleStatus": "active",
+          "collection": "personalized-keepsakes",
+          "slug": "custom-wedding-ring-platter"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": [],
+          "sizeImpression": "medium",
+          "luxurySignal": "high"
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": [],
+          "complexityLevel": "intricate"
+        },
+        "emotional": {
+          "emotions": [],
+          "mood": [],
+          "symbolicMeaning": [],
+          "memoryPotential": "high",
+          "emotionalIntensity": "high"
+        },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "needs-preparation"
+        },
+        "personalization": {
+          "customizable": true,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "high",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; no catalog-text inference."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Everyday Gift Custom Slot",
+      "reference": {
+        "kind": "product-dna",
+        "artifactId": "artifact.pna.product.collaboration-custom-order",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "identity": {
+          "productId": "product.pna.collaboration-custom-order",
+          "productType": "custom-order-slot",
+          "title": "Everyday Gift Custom Slot",
+          "lifecycleStatus": "active",
+          "collection": "gifts-under-1000",
+          "slug": "collaboration-custom-order"
+        },
+        "visual": {
+          "primaryColors": [],
+          "secondaryColors": [],
+          "accentColors": [],
+          "shape": [],
+          "finish": [],
+          "texture": [],
+          "visualStyle": [],
+          "theme": [],
+          "composition": []
+        },
+        "craft": {
+          "materials": [],
+          "techniques": [],
+          "handmadeElements": [],
+          "careConsiderations": []
+        },
+        "emotional": { "emotions": [], "mood": [], "symbolicMeaning": [] },
+        "gifting": {
+          "occasionFit": [],
+          "recipientFit": [],
+          "relationshipFit": [],
+          "ageGroupFit": [],
+          "giftingTone": [],
+          "giftReadiness": "needs-preparation"
+        },
+        "personalization": {
+          "customizable": true,
+          "personalizationTypes": [],
+          "personalizationAreas": [],
+          "personalizationRisk": "high",
+          "suggestedPersonalizations": []
+        },
+        "search": {
+          "semanticKeywords": [],
+          "visualKeywords": [],
+          "customerLanguage": [],
+          "relatedConcepts": [],
+          "negativeKeywords": []
+        },
+        "recommendation": {
+          "bestFor": [],
+          "avoidFor": [],
+          "bundlePotential": [],
+          "alternativeProductTypes": [],
+          "recommendationHooks": []
+        },
+        "provenance": {
+          "source": "pour-n-art-live-pilot-human-review",
+          "capturedAt": "2026-07-13T00:00:00.000Z",
+          "evidence": [],
+          "reviewedByHuman": true,
+          "reviewNotes": "Approved pilot authoring values; optional classifications deliberately not supplied."
+        },
+        "versioning": {
+          "schemaVersion": "1.1.0",
+          "createdAt": "2026-07-13T00:00:00.000Z",
+          "updatedAt": "2026-07-13T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Pour n Art Catalog Readiness Policy",
+      "reference": {
+        "kind": "ruleset",
+        "artifactId": "artifact.pna.ruleset.catalog-readiness",
+        "sourceId": "source.pna.catalog-intelligence-pilot"
+      },
+      "content": {
+        "id": { "value": "ruleset.pna.catalog-readiness" },
+        "label": "Pour n Art Catalog Readiness Policy",
+        "description": "Approved deterministic pilot rules using Core-derived ProductDNA assertions and explicit application facts.",
+        "scope": { "type": "GLOBAL" },
+        "rules": [
+          {
+            "id": { "value": "rule.pna.gift-ready" },
+            "description": "This product is ready for standard gift presentation.",
+            "category": "presentation",
+            "priority": { "value": 10 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  { "kind": "domain-concept", "id": "product.gifting.gift-readiness.gift-ready" }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "PREFER",
+                "target": { "kind": "semantic-node", "id": "presentation.gift" },
+                "explanation": "Use the standard gift presentation workflow."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.premium-gift-ready" },
+            "description": "This product is ready for premium gift presentation.",
+            "category": "presentation",
+            "priority": { "value": 11 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  {
+                    "kind": "domain-concept",
+                    "id": "product.gifting.gift-readiness.premium-gift-ready"
+                  }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "PREFER",
+                "target": { "kind": "semantic-node", "id": "presentation.premium" },
+                "explanation": "Use the premium gift presentation workflow."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.gift-preparation-review" },
+            "description": "Gift preparation must be reviewed before fulfilment.",
+            "category": "eligibility",
+            "priority": { "value": 12 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  {
+                    "kind": "domain-concept",
+                    "id": "product.gifting.gift-readiness.needs-preparation"
+                  }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "REQUIRE",
+                "target": { "kind": "semantic-node", "id": "review.gift-preparation" },
+                "explanation": "Review gift preparation before fulfilment."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.premium-presentation-approved" },
+            "description": "Premium presentation is approved for this product.",
+            "category": "presentation",
+            "priority": { "value": 20 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  { "kind": "domain-concept", "id": "product.visual.luxury-signal.high" },
+                  { "kind": "domain-concept", "id": "pilot.premium-presentation.approved" }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "PREFER",
+                "target": { "kind": "semantic-node", "id": "presentation.premium" },
+                "explanation": "Offer the approved premium presentation."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.personalization-low-risk" },
+            "description": "This product supports the approved low-risk personalization workflow.",
+            "category": "preference",
+            "priority": { "value": 30 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  { "kind": "domain-concept", "id": "product.personalization.customizable.true" },
+                  { "kind": "domain-concept", "id": "product.personalization.risk.low" }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "PREFER",
+                "target": { "kind": "semantic-node", "id": "service.personalization" },
+                "explanation": "Use the standard personalization workflow."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.personalization-review" },
+            "description": "Personalization requires an admin review.",
+            "category": "eligibility",
+            "priority": { "value": 31 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ANY",
+                "references": [
+                  { "kind": "domain-concept", "id": "product.personalization.risk.medium" },
+                  { "kind": "domain-concept", "id": "product.personalization.risk.high" }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "REQUIRE",
+                "target": { "kind": "semantic-node", "id": "review.personalization" },
+                "explanation": "Review personalization details before accepting the work."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.personalization-not-offered" },
+            "description": "Personalization is not offered for this product.",
+            "category": "explanation",
+            "priority": { "value": 32 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  { "kind": "domain-concept", "id": "product.personalization.customizable.false" }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "ANNOTATE",
+                "target": { "kind": "semantic-node", "id": "personalization.not-offered" },
+                "explanation": "Do not present this product as customizable."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.care-guidance" },
+            "description": "Care guidance is required for this product.",
+            "category": "brand-policy",
+            "priority": { "value": 40 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [{ "kind": "domain-concept", "id": "pilot.care-guidance.required" }]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "REQUIRE",
+                "target": { "kind": "semantic-node", "id": "guidance.care-note" },
+                "explanation": "Include reviewed care guidance with this product."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.catalog-incomplete" },
+            "description": "Required catalog information is incomplete.",
+            "category": "brand-policy",
+            "priority": { "value": 50 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [{ "kind": "domain-concept", "id": "catalog.information.incomplete" }]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "REQUIRE",
+                "target": { "kind": "semantic-node", "id": "review.catalog-information" },
+                "explanation": "Complete the required catalog information before approval."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.catalog-complete" },
+            "description": "Required catalog information is complete.",
+            "category": "explanation",
+            "priority": { "value": 51 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [{ "kind": "domain-concept", "id": "catalog.information.complete" }]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "ANNOTATE",
+                "target": { "kind": "semantic-node", "id": "catalog-information.complete" },
+                "explanation": "Required catalog information is present and structurally valid."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.admin-review" },
+            "description": "This product requires an explicit admin review.",
+            "category": "eligibility",
+            "priority": { "value": 60 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [{ "kind": "domain-concept", "id": "pilot.admin-review.required" }]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "REQUIRE",
+                "target": { "kind": "semantic-node", "id": "review.admin" },
+                "explanation": "Complete the approved admin review before relying on this intelligence."
+              }
+            ]
+          },
+          {
+            "id": { "value": "rule.pna.execution-ready" },
+            "description": "The catalog record is operationally ready for evaluation.",
+            "category": "explanation",
+            "priority": { "value": 70 },
+            "scope": { "type": "GLOBAL" },
+            "conditions": [
+              {
+                "operator": "ALL",
+                "references": [
+                  { "kind": "domain-concept", "id": "catalog.product.published" },
+                  { "kind": "domain-concept", "id": "catalog.product.active" },
+                  { "kind": "domain-concept", "id": "catalog.inventory.available" },
+                  { "kind": "domain-concept", "id": "catalog.lead-time.valid" }
+                ]
+              }
+            ],
+            "consequences": [
+              {
+                "directive": "ANNOTATE",
+                "target": { "kind": "semantic-node", "id": "catalog.execution-ready" },
+                "explanation": "The structured catalog record is ready for Aurora evaluation."
+              }
+            ]
+          }
+        ]
+      },
+      "relatedArtifacts": [
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.ocean-bloom-coaster-set",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.floral-ocean-name-plate",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.blush-petal-resin-tray",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.golden-aura-devotional-keepsake",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.memory-resin-frame",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.initial-charm-keychain-pair",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.custom-wedding-ring-platter",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        },
+        {
+          "kind": "product-dna",
+          "artifactId": "artifact.pna.product.collaboration-custom-order",
+          "sourceId": "source.pna.catalog-intelligence-pilot"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "sdk": {
+    "name": "@aurora/sdk",
+    "version": "1.0.0-pilot.1",
+    "sourceCommit": "c69147e88a43dda5a475f22e6233a7df65299614",
+    "tarball": "aurora-sdk-1.0.0-pilot.1.tgz",
+    "sha256": "d526876e13c4e2fcb869bb51e351c8015a84ddc942f948d81cb914d4db701283",
+    "packedBytes": 66720,
+    "published": false
+  },
+  "bundle": {
+    "filename": "aurora-project.json",
+    "format": "aurora-project",
+    "formatVersion": 1,
+    "projectId": "project.pna.catalog-intelligence-pilot",
+    "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52",
+    "sha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f"
+  },
+  "compatibility": {
+    "projectFormat": 1,
+    "contextResolution": "1",
+    "declarativeReasoning": "1",
+    "decisionProjection": "1",
+    "fingerprint": "aurora-json-v1"
+  }
+}
