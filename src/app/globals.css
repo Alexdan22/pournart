@@ -7125,3 +7125,37 @@ label small {
     transform: none;
   }
 }
+/* Aurora Live Pilot admin surfaces */
+.aurora-panel { display: grid; gap: 1rem; }
+.aurora-panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.aurora-panel-heading h2 { margin: .25rem 0 0; }
+.aurora-eyebrow { display: inline-flex; align-items: center; gap: .4rem; color: var(--gold-dark); font-weight: 800; }
+.aurora-message { display: flex; gap: .8rem; align-items: start; border: 1px solid rgba(120,90,45,.18); border-radius: 14px; padding: 1rem; background: rgba(255,255,255,.65); }
+.aurora-message.warning { border-color: rgba(157,72,42,.35); background: rgba(157,72,42,.07); }
+.aurora-message.loading { opacity: .8; }
+.aurora-message h3, .aurora-message p { margin: 0; }
+.aurora-message p { margin-top: .25rem; }
+.aurora-success, .aurora-decision-list { display: grid; gap: 1rem; }
+.aurora-outcome { display: flex; gap: .8rem; align-items: start; padding: 1.1rem; border-radius: 16px; background: rgba(42,112,73,.09); border: 1px solid rgba(42,112,73,.25); }
+.aurora-outcome.needs-review { background: rgba(157,72,42,.08); border-color: rgba(157,72,42,.3); }
+.aurora-outcome span, .aurora-decision-category { display: block; color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.aurora-outcome strong { display: block; font-family: var(--font-serif); font-size: 1.6rem; }
+.aurora-outcome p { margin: .25rem 0 0; }
+.aurora-decision-card { border: 1px solid rgba(120,90,45,.16); border-radius: 14px; padding: 1rem; background: rgba(255,255,255,.58); }
+.aurora-decision-card h3 { margin: .25rem 0 .85rem; }
+.aurora-decision-line { display: grid; grid-template-columns: minmax(140px,.35fr) 1fr; gap: .75rem; padding: .65rem 0; border-top: 1px solid rgba(120,90,45,.11); }
+.aurora-decision-line.warning strong { color: #934f32; }
+.aurora-explanation { margin: .8rem 0; }
+.aurora-decision-card details, .aurora-advanced { border-top: 1px solid rgba(120,90,45,.14); padding-top: .75rem; }
+.aurora-decision-card summary, .aurora-advanced summary { cursor: pointer; display: flex; align-items: center; gap: .35rem; font-weight: 800; }
+.aurora-evidence-list { padding-left: 1.25rem; }
+.aurora-evidence-list pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .75rem; }
+.aurora-advanced dl { display: grid; grid-template-columns: minmax(150px,.3fr) 1fr; gap: .5rem 1rem; }
+.aurora-advanced dt { font-weight: 800; }
+.aurora-advanced dd { margin: 0; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: .82rem; }
+.spin { animation: aurora-spin 1s linear infinite; }
+@keyframes aurora-spin { to { transform: rotate(360deg); } }
+@media (max-width: 720px) {
+  .aurora-panel-heading { flex-direction: column; }
+  .aurora-decision-line, .aurora-advanced dl { grid-template-columns: 1fr; }
+}

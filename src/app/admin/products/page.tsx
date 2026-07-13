@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Archive, ArrowLeft, ArrowRight, Check, Search, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, ArrowRight, Check, Search, Sparkles, Trash2 } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { bulkProductAction, quickUpdateProductAction } from "@/app/actions/admin";
 import { AdminSortLink } from "@/components/admin-sort-link";
@@ -173,6 +173,9 @@ export default async function AdminProductsPage({
                 </td>
                 <td>{product.updatedAt.toLocaleDateString("en-IN")}</td>
                 <td>
+                  <Link className="icon-action" href={`/admin/products/${product.id}/intelligence`} aria-label={`Open Aurora Intelligence for ${product.name}`}>
+                    <Sparkles aria-hidden size={15} />
+                  </Link>
                   <button className="icon-action" form={`product-${product.id}`} type="submit" aria-label="Save product">
                     <Check aria-hidden size={15} />
                   </button>
