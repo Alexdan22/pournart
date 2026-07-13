@@ -7159,3 +7159,9 @@ label small {
   .aurora-panel-heading { flex-direction: column; }
   .aurora-decision-line, .aurora-advanced dl { grid-template-columns: 1fr; }
 }
+.aurora-catalog { display: grid; gap: .75rem; }
+.aurora-catalog td small { display: block; color: var(--muted); margin-top: .2rem; }
+.aurora-progress { margin: 0; color: var(--muted); }
+.aurora-state { display: inline-flex; padding: .25rem .55rem; border-radius: 999px; background: rgba(82,97,102,.1); font-size: .78rem; font-weight: 800; white-space: nowrap; }
+.aurora-state.success, .aurora-state.ready { color: #246744; background: rgba(42,112,73,.1); }
+.aurora-state.blocking, .aurora-state.needs-review, .aurora-state.invalid { color: #934f32; background: rgba(157,72,42,.1); }

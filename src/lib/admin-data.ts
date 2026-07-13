@@ -16,6 +16,7 @@ export const adminNavItems = [
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/production", label: "Production Board" },
   { href: "/admin/products", label: "Products" },
+  { href: "/admin/intelligence", label: "Aurora Intelligence" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/inventory", label: "Inventory" },
