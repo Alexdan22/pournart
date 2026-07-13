@@ -47,3 +47,7 @@ services:
         generateValue: true
       - key: NEXT_PUBLIC_WHATSAPP_NUMBER
         sync: false
+      - key: AURORA_PILOT_ENABLED
+        value: "false"
+      - key: AURORA_PILOT_ADMIN_ALLOWLIST
+        sync: false

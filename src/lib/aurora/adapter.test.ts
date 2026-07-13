@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { buildAuroraExplicitReferences } from "./assertions";
@@ -161,6 +161,13 @@ describe("Aurora pilot authorization", () => {
     expect(evaluateAuroraAccess({ enabled: true, allowlist, session: { ...admin, role: "CUSTOMER" } })).toMatchObject({ code: "NOT_ADMIN" });
     expect(evaluateAuroraAccess({ enabled: true, allowlist: new Set(), session: admin })).toMatchObject({ code: "NOT_ALLOWLISTED" });
     expect(evaluateAuroraAccess({ enabled: true, allowlist, session: admin })).toEqual({ ok: true });
+  });
+});
+
+describe("Aurora customer boundary", () => {
+  it("does not expose a customer Aurora API or storefront route", () => {
+    expect(existsSync(join(process.cwd(), "src", "app", "api", "aurora"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "src", "app", "(store)", "aurora"))).toBe(false);
   });
 });
 

@@ -55,7 +55,10 @@ npm run db:migrate
 npm run db:deploy
 npm run db:seed
 npm run db:studio
+npm run aurora:validate
 ```
+
+The disabled-by-default, admin-only Aurora Live Pilot deployment and rollback procedure is documented in `docs/AURORA_LIVE_PILOT.md`.
 
 ## Deployment Direction
 

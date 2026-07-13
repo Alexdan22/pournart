@@ -16,7 +16,8 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "email:preview": "tsx scripts/email-preview.ts",
-    "email:test": "node scripts/test-email.js"
+    "email:test": "node scripts/test-email.js",
+    "aurora:validate": "tsx scripts/aurora-validate.mts"
   },
   "dependencies": {
     "@aurora/sdk": "file:vendor/aurora/aurora-sdk-1.0.0-pilot.1.tgz",
