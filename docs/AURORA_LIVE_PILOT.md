@@ -1,113 +1,84 @@
 # Aurora Live Pilot - controlled VPS operation
 
-## Active pilot deployment
+## Current production state
 
 - Environment: Pour n Art production VPS, accessed through SSH host alias `my_vps`.
 - Application root: `/home/alex/pour-n-art`.
-- Active release: `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9`.
-- Pour n Art commit: `8b208c91091e341597244e3c3919d34269870dc1`.
-- Process manager: PM2.
-- Process name: `pour-n-art` only.
-- Environment file: `/home/alex/pour-n-art/shared/.env` (mode `600`).
-- Activation backup: `/home/alex/pour-n-art/shared/.env.bak-before-aurora-activation-20260713-125141` (mode `600`).
-- Previous deployment backup: `/home/alex/pour-n-art/shared/.env.bak-before-aurora-20260713-123728`.
-- Application rollback release: `/home/alex/pour-n-art/releases/20260707-140449-shiprocket-f635983`.
+- Active release: `/home/alex/pour-n-art/releases/20260714-074049-catalog-operations-281148d`.
+- Deployed source commit: `281148d580adc92dca8200bc857df26970ebb154`.
+- Process manager: PM2, one `fork` process named `pour-n-art`.
+- Shared database: `/home/alex/pour-n-art/shared/pour-n-art.db`, SQLite `DELETE` journal mode.
+- Shared environment: `/home/alex/pour-n-art/shared/.env`, mode `600`.
+- Aurora pilot flag: disabled after the 2026-07-14 Stage 7 identity-reporting gate failed.
+- Allowlist: exactly one stable production admin ID, retained only in the protected environment file.
+- Application and bundle rollback release: `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9`.
 
-The VPS is the active pilot environment. Deployment and rollback use the timestamped release directories, the atomic `current` symlink, and the single PM2 process named `pour-n-art`.
+The twelve-product bundle and versioned binding manifest are installed together in the active release, and the two catalog-operations migrations are applied. Aurora cannot execute while the feature flag is disabled. Storefront, checkout, admin, and unrelated PM2 processes remain healthy.
 
-## Catalog-operations candidate — not deployed
+## Installed artifact identity
 
-The local `codex/aurora-catalog-operations` branch contains a twelve-product replacement pair. It is not active on the VPS and must not be copied into the current release independently.
-
-- Aurora commit: `df5d6b3122fedf0890ed75435ad93c7c21eeed73`.
+- Aurora source commit: `df5d6b3122fedf0890ed75435ad93c7c21eeed73`.
+- SDK: unpublished `@aurora/sdk@1.0.0-pilot.1`.
+- SDK tarball SHA-256: `d526876e13c4e2fcb869bb51e351c8015a84ddc942f948d81cb914d4db701283`.
+- Project: `project.pna.catalog-intelligence-pilot`, `aurora-project` v1.
 - Bundle SHA-256: `952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c`.
 - Project fingerprint: `0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b`.
-- Binding manifest fingerprint: `03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499`.
-- Database changes: two additive migrations, still unapplied in production.
+- Binding-manifest file SHA-256: `7e627fe96f82774bfc75d7fdab99ebb6a23c516e238712b9b6579c62a6747c43`.
+- Binding-manifest fingerprint: `03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499`.
+- Coverage: twelve active exact-slug bindings, no fuzzy binding, no expected database ID override.
 
-The active release and all activation evidence below continue to describe the existing eight-product pilot. The candidate’s migration, backup, release, restart, activation, and evaluation steps remain behind the external-action gate in `AURORA_CATALOG_OPERATIONS.md`.
+## 2026-07-14 deployment evidence
 
-## Runtime and access controls
+The exact pushed source commit passed 58 tests, including three accessibility scans, lint, artifact/runtime validation, and a Next.js 16.2.9 production build. The first build reached TypeScript but exhausted Node's default heap; a single bounded retry with `NODE_OPTIONS=--max-old-space-size=1024` passed. The standalone release contains no copied `.env` and reads only the shared environment through `/home/alex/pour-n-art/run.sh`.
 
-- SDK: unpublished `@aurora/sdk@1.0.0-pilot.1`, committed as a checksummed tarball.
-- Bundle: `aurora-project` v1 project `project.pna.catalog-intelligence-pilot`.
-- Runtime: server-only, immutable, process-reused, and isolated from storefront and checkout startup.
-- Access: valid session, `ADMIN` role, and exact membership in `AURORA_PILOT_ADMIN_ALLOWLIST`.
-- Active flag: `AURORA_PILOT_ENABLED=true`.
-- Allowlist: one stable production admin user ID. The ID is kept in the mode-`600` environment file and is redacted in repository records.
-- Cache: bounded process-local successful-result cache. A `pour-n-art` restart or bundle fingerprint change invalidates effective reuse.
-- Persistence: no evaluation result persistence and no external cache.
+Backups and rehearsal:
 
-No database migration or seed was run for deployment or activation.
+- Environment backup before rollout: `/home/alex/pour-n-art/shared/.env.bak-before-catalog-operations-20260714T072500Z`, SHA-256 `a92fc6fd72b8951ea6609c15d45934a88df137af57f85a59eced47753718f1e3`.
+- Environment backup before disabled cutover: `/home/alex/pour-n-art/shared/.env.bak-before-disabled-cutover-20260714T074250Z`, the same SHA-256.
+- Environment backup before activation attempt: `/home/alex/pour-n-art/shared/.env.bak-before-catalog-activation-20260714T074730Z`, SHA-256 `3cab4e4a75ceae38fea25625a32673f900979c5fedaffe831afbb4cbdb449fa3`.
+- Online database backup: `/home/alex/pour-n-art/backups/sqlite/pour-n-art-manual-20260714T072500Z.db`, SHA-256 `cd915015eb91355b5732e0b6312c22af0b0d1f03ec445db2c2589336c25fc0db`, 454,656 bytes, integrity `ok`.
+- Quiesced database backup: `/home/alex/pour-n-art/backups/sqlite/pour-n-art-manual-20260714T074330Z.db`, same checksum and size, integrity `ok`, mode `600`.
+- VPS-local migration rehearsal: both migrations applied to a restored copy, resulting SHA-256 `b45bc9d4534d54e88cf04ffba9e619ac700f64eea5ccd9d1716e98d5b547d9e5`, 540,672 bytes, integrity `ok`; an independent restore retained the original backup checksum.
+- Production migration: only `npm run db:deploy` ran; seed did not run. Eight migrations are applied, all three Aurora tables and 16 indexes exist, and database integrity is `ok`.
+- Critical counts remained four users, twelve products, one order, one order item, and six categories.
 
-## Controlled activation procedure
+Disabled smoke checks passed for storefront, product list/detail, empty-cart checkout, authenticated admin dashboard, orders, generic disabled Aurora health, absent customer Aurora route, database integrity, and process isolation.
 
-1. Confirm `current` resolves to the approved release and the source checkout matches the approved commit.
-2. Record the PIDs for `pour-n-art`, `pullback`, `telegram-listener`, and `webfoot-api`.
-3. Query only `User.id`, `User.name`, `User.email`, and `User.role` to identify the unique production `ADMIN`; never select password hashes or session material.
-4. Copy `/home/alex/pour-n-art/shared/.env` to a timestamped, mode-`600` backup.
-5. Set `AURORA_PILOT_ENABLED=true` and set `AURORA_PILOT_ADMIN_ALLOWLIST` to only the approved stable admin ID.
-6. Do not run migrations or the seed process.
-7. Run `pm2 restart pour-n-art --update-env`; do not use `pm2 restart all`.
-8. Wait for `http://127.0.0.1:3001/` to return success.
-9. Confirm all unrelated PM2 PIDs are unchanged.
-10. Run the authorization, health, storefront, checkout, admin, canary, logging, and mutation checks below.
+## Activation gate result
 
-## Health and authorization checks
+The protected allowlist was verified as exactly the existing admin ID. The activation attempt produced the expected authorization behavior:
 
-1. `GET /` and `GET /checkout` must return `200` locally and through `https://pournart.in`.
-2. An unauthenticated `GET /admin` must redirect to `/login`.
-3. An unauthenticated `GET /api/admin/aurora/health` must return generic `401` JSON without pilot details.
-4. A valid non-admin session must receive generic `403` JSON with `NOT_ADMIN`.
-5. A valid but non-allowlisted admin session must receive generic `403` JSON with `NOT_ALLOWLISTED`.
-6. The allowlisted admin must receive `200 application/json` from `/api/admin/aurora/health`.
-7. Health must report runtime `ok`, no issue codes, the expected SDK version, project ID, bundle checksum, compatibility versions, and project fingerprint.
-8. `/api/aurora/health` must remain absent so no customer Aurora API exists.
+- Unauthenticated admin Aurora health: generic `401`.
+- Authenticated non-admin: generic `403` with `NOT_ADMIN`.
+- Authenticated non-allowlisted admin: generic `403` with `NOT_ALLOWLISTED`.
+- Allowlisted admin: `200`.
+- Customer Aurora route: `404`.
 
-Never print or store session cookies, JWTs, passwords, password hashes, or environment secrets while performing these checks.
+Runtime health reported initialization success, SDK `1.0.0-pilot.1`, the expected project ID, bundle checksum, project fingerprint, and no issue codes. The response did not include the required binding-manifest fingerprint. The Stage 7 fail-closed handler therefore set `AURORA_PILOT_ENABLED=false` and restarted only `pour-n-art`.
 
-## Activation evidence - 2026-07-13
+No canary or catalog evaluation ran. `AuroraEvaluation`, `AuroraEvaluationReview`, and `AuroraReviewEvent` each remain at zero rows. No product was modified, no review state was created, no backup schedule was installed, and the seven-day observation period did not begin. Temporary smoke credentials were deleted, and the audited PM2 log window had zero matches for cookie, password, bearer, authorization, session-cookie, or session-secret terms.
 
-- PM2 `pour-n-art`: PID `138643` before activation, PID `139393` after activation.
-- Unrelated PM2 PIDs remained unchanged: `pullback` `134533`, `telegram-listener` `19571`, `webfoot-api` `19581`.
-- Storefront and empty-cart checkout returned `200` after activation and after all evaluations.
-- Authenticated admin dashboard and `/admin/intelligence` loaded successfully.
-- SDK version: `1.0.0-pilot.1`.
-- Bundle SHA-256: `0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f`.
-- Project ID: `project.pna.catalog-intelligence-pilot`.
-- Project fingerprint: `152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52`.
-- Health issue codes: none.
-- The Ocean-Inspired Gift Coaster Set canary returned five accepted deterministic Decisions, including the expected blocking care-guidance constraint.
-- Canary evidence/provenance and advanced fingerprints expanded correctly in the admin UI.
-- Repeated canary execution returned the same response hash, input fingerprint, and output fingerprint.
-- The remaining seven products completed in preserved order with zero partial failures; their repeated responses were equivalent.
-- No needs-review conflicts were returned. This is expected because the conflict fixture is excluded from the live RuleSet.
-- All eight product row SHA-256 values and `updatedAt` values were unchanged after evaluation.
-- Thirty-four Aurora log events were audited with zero forbidden matches for product names, product content, evidence, provenance/source values, cookies, sessions, tokens, or passwords.
+PM2 evidence:
 
-The SDK cache returns the cached response for a repeated successful input fingerprint. The current SDK log contract emits a normal success event for both cache misses and cache hits and does not include an explicit `cacheHit` field; cache reuse is therefore established by the verified code path, identical fingerprint, bounded cache state, and equivalent repeated response rather than by a dedicated log property.
+- `pour-n-art`: PID `139393` before deployment, `167186` after disabled cutover, `167515` during activation, and `167697` after fail-closed disablement.
+- `pullback`: PID `134533`, unchanged.
+- `telegram-listener`: PID `19571`, unchanged.
+- `webfoot-api`: PID `19581`, unchanged.
 
-## Pilot result table
+## Required correction before another activation
 
-| Product | Exact slug | Result | Decisions | Blocking decisions | Needs-review conflicts |
-| --- | --- | --- | ---: | ---: | ---: |
-| Ocean-Inspired Gift Coaster Set | `ocean-bloom-coaster-set` | Success | 5 | 1 | 0 |
-| Botanical Welcome Name Plate | `floral-ocean-name-plate` | Success | 7 | 3 | 0 |
-| Blush Petal Memory Tray | `blush-petal-resin-tray` | Success | 6 | 1 | 0 |
-| Golden Aura Devotional Keepsake | `golden-aura-devotional-keepsake` | Success | 5 | 1 | 0 |
-| Memory Keepsake Frame | `memory-resin-frame` | Success | 7 | 4 | 0 |
-| Initial Charm Everyday Keepsake | `initial-charm-keychain-pair` | Success | 4 | 0 | 0 |
-| Custom Wedding Ring Platter | `custom-wedding-ring-platter` | Success | 7 | 4 | 0 |
-| Everyday Gift Custom Slot | `collaboration-custom-order` | Success | 5 | 3 | 0 |
+The authenticated health contract must expose and validate the loaded binding-manifest fingerprint. The correction must be implemented and tested locally, built into a new release, and separately approved for deployment. Do not enable Aurora, run a canary, evaluate the catalog, install the approved backup schedule, or begin the observation period before the corrected identity gate passes.
 
-No unexpected Decisions or product mutations were observed.
+## Health and authorization procedure
 
-## Logging and customer boundary
+1. Keep `AURORA_PILOT_ENABLED=false` until the corrected release is installed.
+2. Confirm `current`, release commit, PM2 shape, database integrity, and rollback inputs.
+3. Back up the protected environment before any flag change.
+4. Restart only `pour-n-art`; never restart all PM2 processes.
+5. Verify generic `401`/`403` behavior, exact allowlist success, absent customer endpoint, and every SDK, project, bundle, project-fingerprint, binding-manifest-fingerprint, and issue-code field.
+6. On any mismatch, disable the flag and restart only `pour-n-art` before executing a product.
 
-- Logs may contain operational database IDs, binding IDs, artifact IDs, issue codes, fingerprints, stages, and duration.
-- Logs must not contain product names or content, ProductDNA values, evidence, provenance/source values, customer data, cookies, session data, tokens, or secrets.
-- Aurora APIs remain under `/api/admin/aurora/*` and independently enforce flag, session, role, and allowlist checks.
-- No customer Aurora route or customer-visible Aurora UI is authorized.
+Never print or store session cookies, JWTs, passwords, password hashes, environment secrets, customer data, ProductDNA values, evidence, or provenance during checks.
 
 ## Rollback
 
@@ -117,17 +88,13 @@ Emergency isolation:
 2. Set `AURORA_PILOT_ENABLED=false`.
 3. Run `pm2 restart pour-n-art --update-env` only.
 4. Confirm unrelated PM2 PIDs are unchanged.
-5. Verify storefront, checkout, admin, and disabled Aurora health behavior.
+5. Verify storefront, checkout, admin, disabled Aurora health, and database integrity.
 
-Application rollback:
+Application and bundle rollback:
 
-1. Set `AURORA_PILOT_ENABLED=false` and restart only `pour-n-art`.
-2. Atomically repoint `/home/alex/pour-n-art/current` to `/home/alex/pour-n-art/releases/20260707-140449-shiprocket-f635983`.
+1. Keep Aurora disabled.
+2. Atomically repoint `/home/alex/pour-n-art/current` to `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9`.
 3. Restart only `pour-n-art`.
-4. Repeat storefront, checkout, admin, and disabled-health smoke checks.
+4. Repeat disabled smoke checks.
 
-Bundle rollback must restore the prior committed bundle and matching deployment manifest/checksum as one release. Never replace only the JSON bundle or only its checksum.
-
-## Pilot failure criteria
-
-Immediately disable the pilot and restart only `pour-n-art` on authorization bypass, checksum or compatibility failure, identity ambiguity, initialization failure, non-Aurora regression, privacy-unsafe logging, unexplained nondeterminism, product mutation, unavailable rollback input, or a new high/critical vulnerability. Do not continue product evaluation after any such failure.
+The additive catalog-operations tables may remain in place during application rollback. Do not restore an older database after customer traffic has resumed without a separately approved reconciliation plan. Bundle and binding manifest always roll back as one release pair.

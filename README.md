@@ -62,6 +62,6 @@ The disabled-by-default, admin-only Aurora Live Pilot deployment and rollback pr
 
 ## Deployment Direction
 
-Production currently runs on the Pour n Art VPS as one PM2 `fork` process with the shared SQLite database at `/home/alex/pour-n-art/shared/pour-n-art.db`. Releases use timestamped directories and an atomic `current` symlink. Do not run the seed process in production. Aurora catalog-operations migration, backup, release, activation, and rollback remain separately gated procedures documented in `docs/AURORA_CATALOG_OPERATIONS.md`.
+Production currently runs on the Pour n Art VPS as one PM2 `fork` process with the shared SQLite database at `/home/alex/pour-n-art/shared/pour-n-art.db`. Releases use timestamped directories and an atomic `current` symlink. Do not run the seed process in production. The catalog-operations release and additive migrations are installed, but Aurora is disabled after failing closed at the binding-manifest identity-reporting gate; the evidence and required next approval are documented in `docs/AURORA_CATALOG_OPERATIONS.md`.
 
 A future move to a managed database or another hosting platform is a separate architecture milestone; it is not a prerequisite or an authorized part of the current VPS rollout.

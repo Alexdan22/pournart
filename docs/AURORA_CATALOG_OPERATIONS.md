@@ -1,8 +1,10 @@
 # Aurora catalog operations readiness
 
-## Local-only implementation boundary
+## Production rollout status
 
-Sprints 56-60 are implemented and validated sequentially on the local milestone branches. The Sprint 60 ProductDNA checkpoint was approved before the four new artifacts were created. No command in this document authorizes a production backup, migration, environment change, PM2 action, bundle replacement, or deployment. Those actions require the separate external-action approval.
+Sprints 56-60 were implemented and validated sequentially. External approval was granted on 2026-07-14, and the approved Pour n Art commits were fast-forwarded to `master` and pushed through `281148d580adc92dca8200bc857df26970ebb154`. Aurora was fast-forwarded locally through `df5d6b3122fedf0890ed75435ad93c7c21eeed73`; its configured remote has no `master` branch or verified upstream, so remote backup remains pending.
+
+The catalog-operations application release and both additive migrations are installed on the VPS, but the Aurora pilot is disabled. Activation stopped at the Stage 7 identity-reporting gate because `/api/admin/aurora/health` did not include the required binding-manifest fingerprint. No canary or catalog evaluation ran, no Aurora evaluation/review row was created, backup scheduling was not installed, and the seven-day observation period did not begin. A code correction, local validation, separate deployment, and renewed activation approval are required before evaluation.
 
 ## SQLite assumptions
 
@@ -25,7 +27,7 @@ python scripts/sqlite-backup.py restore --backup $env:TEMP/pna-backups/<backup>.
 
 Every backup records SHA-256, byte size, `PRAGMA integrity_check`, applied Prisma migrations, table row counts, and available disk space. Backup database and metadata files are private to their owner on POSIX systems and must never be committed.
 
-The eventual production schedule is 14 daily and eight weekly copies. Local implementation documents this retention but does not configure a timer or modify the VPS.
+The approved production schedule remains 14 daily and eight weekly copies. It was not installed because activation stopped before the Stage 10 scheduling gate.
 
 ## Migration rehearsal
 
@@ -37,7 +39,7 @@ The eventual production schedule is 14 daily and eight weekly copies. Local impl
 6. Compare migration names, representative Product/User/Order counts, and storefront queries with the source report.
 7. Confirm the previous application can read its existing tables after the additive migrations.
 
-The production-copy rehearsal and production migration remain external actions.
+The production-copy rehearsal and production migration completed on 2026-07-14. The rehearsal applied both migrations to a restored production backup, preserved critical row counts, passed representative catalog and order queries, and restored independently. Production then applied only the same two migrations while `pour-n-art` was stopped. Production now has eight applied migrations and an `ok` integrity check; no seed command ran.
 
 ## Growth policy
 
@@ -80,7 +82,7 @@ The process cache is capped at 200 successful results and is acceleration only. 
 ## Twelve-product release candidate
 
 - Aurora source commit: `df5d6b3122fedf0890ed75435ad93c7c21eeed73`.
-- Pour n Art parent commit: `e877ddf2725e99df3c7bd73897221ff5395c2596`; the completion report records the resulting rollout commit.
+- Pour n Art release commit: `281148d580adc92dca8200bc857df26970ebb154`.
 - Project ID: `project.pna.catalog-intelligence-pilot`; bundle format remains `aurora-project` v1.
 - Bundle SHA-256: `952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c`.
 - Project fingerprint: `0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b`.
@@ -90,10 +92,22 @@ The process cache is capped at 200 successful results and is acceleration only. 
 
 The bundle and binding manifest are one atomic release pair. Deploying this pair intentionally makes every prior evaluation stale through the bundle, artifact, and manifest fingerprints. It does not automatically execute Aurora or modify product records.
 
-The previous eight-product pair remains in the currently deployed release `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9` with bundle SHA-256 `0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f` and project fingerprint `152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52`. Bundle rollback switches the whole application release; never mix the old bundle with the new binding manifest or deployment checksum.
+The previous eight-product pair remains intact in rollback release `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9` with bundle SHA-256 `0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f` and project fingerprint `152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52`. Bundle rollback switches the whole application release; never mix the old bundle with the new binding manifest or deployment checksum.
 
-## Externally gated migration and rollout
+## Production evidence - 2026-07-14
 
-After separate approval: record PM2 shape and unrelated PIDs; take and verify an online database backup; rehearse both migrations against a VPS-local restored copy; disable Aurora; stop only `pour-n-art`; take a final quiesced backup; run migration-only `npm run db:deploy`; switch the atomic release; start only `pour-n-art`; and validate storefront, checkout, admin, database integrity, disabled Aurora, and unrelated PIDs before activation. Never run `db:seed`.
+- Active release: `/home/alex/pour-n-art/releases/20260714-074049-catalog-operations-281148d`.
+- Rollback release: `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9`.
+- Online backup: `/home/alex/pour-n-art/backups/sqlite/pour-n-art-manual-20260714T072500Z.db`, SHA-256 `cd915015eb91355b5732e0b6312c22af0b0d1f03ec445db2c2589336c25fc0db`, 454,656 bytes, integrity `ok`.
+- Quiesced backup: `/home/alex/pour-n-art/backups/sqlite/pour-n-art-manual-20260714T074330Z.db`, the same checksum and size, integrity `ok`, mode `600`.
+- Rehearsal output: eight migrations, SHA-256 `b45bc9d4534d54e88cf04ffba9e619ac700f64eea5ccd9d1716e98d5b547d9e5`, 540,672 bytes, integrity `ok`; an independent restore of the source backup matched its original checksum.
+- Production after migration: eight migrations, three Aurora tables, 16 Aurora indexes, zero Aurora evaluation/review rows, 540,672-byte database, integrity `ok`, and unchanged critical counts of four users, twelve products, one order, one order item, and six categories.
+- Disabled smoke checks passed for storefront, product list/detail, empty-cart checkout, authenticated admin dashboard, orders, disabled Aurora health, absent customer Aurora route, and unrelated process isolation.
+- PM2 `pour-n-art` changed from PID `139393` to `167186` for the disabled release, to `167515` for the attempted activation, and to `167697` when the safety handler disabled the pilot. `pullback` `134533`, `telegram-listener` `19571`, and `webfoot-api` `19581` never changed.
+- Authorization checks passed: unauthenticated `401`, non-admin `403`, non-allowlisted admin `403`, allowlisted admin `200`, and customer Aurora endpoint `404`.
+- Runtime health reported initialized status, SDK `1.0.0-pilot.1`, the expected project ID, bundle checksum, project fingerprint, and no issue codes. It did not report binding-manifest fingerprint `03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499`; activation therefore failed closed.
+- Safety response: set `AURORA_PILOT_ENABLED=false`, restarted only `pour-n-art`, removed temporary smoke credentials, confirmed zero prohibited log-keyword matches, and left the additive migrations in place.
 
-Activation then reuses the existing ADMIN allowlist, restarts only `pour-n-art`, verifies health and one canary, verifies persisted canary history after one controlled restart, evaluates the four additions, and begins the approved seven-day observation. Rollback disables Aurora first and returns to the prior application release with additive tables left intact. Database restoration is allowed only before customer traffic resumes or under a separately approved reconciliation plan.
+## Next gated action
+
+Add the validated binding-manifest fingerprint to the authenticated health contract, repeat local tests/build and release validation, then request renewed approval to deploy and repeat Stage 7. Do not run a canary, catalog evaluation, backup schedule, or observation period until that identity gate passes. Application rollback remains available by disabling Aurora and atomically switching to the previous release; database restoration is not required for the healthy additive schema.

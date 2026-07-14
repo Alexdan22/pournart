@@ -1,24 +1,22 @@
 {
-  "status": "vps-pilot-active",
-  "recordedAt": "2026-07-13T07:28:31.271Z",
+  "status": "catalog-operations-deployed-pilot-disabled-identity-gate-blocked",
+  "recordedAt": "2026-07-14T07:50:00Z",
   "repositories": {
     "aurora": {
       "branch": "master",
-      "projectCommit": "2e692a0",
-      "sdkSourceCommit": "c69147e88a43dda5a475f22e6233a7df65299614"
+      "commit": "df5d6b3122fedf0890ed75435ad93c7c21eeed73",
+      "remoteBackup": "pending-no-verified-upstream"
     },
     "pourNArt": {
       "branch": "master",
-      "deployedCommit": "8b208c91091e341597244e3c3919d34269870dc1",
-      "adapterCommit": "e0631a6",
-      "productPanelCommit": "9ad632f",
-      "catalogWorkflowCommit": "b3f1386",
-      "controlledDeploymentCommit": "5f9e5b3bc5d778f3795b501f2808fc0043abac48"
+      "deployedCommit": "281148d580adc92dca8200bc857df26970ebb154",
+      "pushedThroughCommit": "281148d580adc92dca8200bc857df26970ebb154"
     }
   },
   "sdk": {
     "name": "@aurora/sdk",
     "version": "1.0.0-pilot.1",
+    "sourceCommit": "c69147e88a43dda5a475f22e6233a7df65299614",
     "tarball": "vendor/aurora/aurora-sdk-1.0.0-pilot.1.tgz",
     "sha256": "d526876e13c4e2fcb869bb51e351c8015a84ddc942f948d81cb914d4db701283",
     "packedBytes": 66720,
@@ -30,112 +28,164 @@
     "format": "aurora-project",
     "formatVersion": 1,
     "projectId": "project.pna.catalog-intelligence-pilot",
-    "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52",
-    "sha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f"
+    "productCount": 12,
+    "projectFingerprint": "0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b",
+    "sha256": "952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c"
+  },
+  "bindingManifest": {
+    "path": "vendor/aurora/binding-manifest.json",
+    "fileSha256": "7e627fe96f82774bfc75d7fdab99ebb6a23c516e238712b9b6579c62a6747c43",
+    "fingerprint": "03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499",
+    "activeBindings": 12,
+    "awaitingReview": 0
   },
   "deployment": {
     "target": "VPS",
     "sshHostAlias": "my_vps",
     "applicationRoot": "/home/alex/pour-n-art",
-    "releasePath": "/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9",
-    "commit": "8b208c91091e341597244e3c3919d34269870dc1",
+    "releasePath": "/home/alex/pour-n-art/releases/20260714-074049-catalog-operations-281148d",
+    "rollbackRelease": "/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9",
     "processManager": "PM2",
     "processName": "pour-n-art",
+    "processMode": "fork",
+    "instanceCount": 1,
     "environmentFile": "/home/alex/pour-n-art/shared/.env",
-    "environmentBackup": "/home/alex/pour-n-art/shared/.env.bak-before-aurora-activation-20260713-125141",
-    "rollbackRelease": "/home/alex/pour-n-art/releases/20260707-140449-shiprocket-f635983",
-    "featureFlagEnabled": true,
+    "featureFlagEnabled": false,
     "allowlist": {
       "selector": "stable-admin-user-id",
       "entryCount": 1,
-      "reportedAdminId": "cmr6...qdg4"
+      "reportedAdminId": "cmr631...dg4"
     },
-    "databaseMigrationRun": false,
-    "seedRun": false,
-    "resultPersistenceEnabled": false
-  },
-  "activationEvidence": {
-    "pm2": {
-      "pourNArtPidBefore": 138643,
-      "pourNArtPidAfter": 139393,
-      "unrelatedPidsUnchanged": true,
-      "unrelatedProcesses": {
-        "pullback": 134533,
-        "telegram-listener": 19571,
-        "webfoot-api": 19581
-      }
-    },
-    "health": {
-      "status": 200,
-      "ok": true,
-      "issueCodes": [],
-      "sdkVersion": "1.0.0-pilot.1",
-      "projectId": "project.pna.catalog-intelligence-pilot",
-      "bundleSha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f",
-      "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52"
-    },
-    "authorization": {
-      "unauthenticatedDenied": true,
-      "nonAdminDenied": true,
-      "nonAllowlistedAdminDenied": true,
-      "allowlistedAdminAccepted": true,
-      "customerEndpointAbsent": true
-    },
-    "canary": {
-      "slug": "ocean-bloom-coaster-set",
-      "state": "success",
-      "decisionCount": 5,
-      "careGuidanceBlockingConstraintPresent": true,
-      "repeatedResponseEquivalent": true,
-      "inputFingerprint": "f633e83682ade3720a05e414eefce1d1a7dbe794e0f534c2cec1da0aeaf3663e",
-      "outputFingerprint": "1ee119e060729f7afd9f76ff4205a2e948048246cfe8983424f8cde49874e68e"
-    },
-    "remainingProducts": {
-      "evaluated": 7,
-      "successful": 7,
-      "partialFailures": 0,
-      "inputOrderPreserved": true,
-      "repeatedResponsesEquivalent": true
-    },
-    "safety": {
-      "allEightProductRowsUnchanged": true,
-      "auroraLogEventsAudited": 34,
-      "privacyForbiddenLogMatches": 0,
-      "storefrontHealthy": true,
-      "checkoutHealthy": true,
-      "adminHealthy": true
+    "database": {
+      "path": "/home/alex/pour-n-art/shared/pour-n-art.db",
+      "journalMode": "delete",
+      "bytesAfterMigration": 540672,
+      "integrity": "ok",
+      "appliedMigrations": 8,
+      "seedRun": false,
+      "auroraTables": 3,
+      "auroraIndexes": 16,
+      "auroraEvaluationRows": 0,
+      "auroraReviewRows": 0,
+      "auroraReviewEventRows": 0
     }
   },
-  "catalogOperationsCandidate": {
-    "status": "local-not-deployed",
-    "branch": "codex/aurora-catalog-operations",
-    "auroraCommit": "df5d6b3122fedf0890ed75435ad93c7c21eeed73",
-    "pourNArtParentCommit": "e877ddf2725e99df3c7bd73897221ff5395c2596",
-    "pourNArtCommitRef": "chore(aurora): roll out catalog operations bundle",
-    "bundle": {
+  "backups": {
+    "environment": [
+      {
+        "path": "/home/alex/pour-n-art/shared/.env.bak-before-catalog-operations-20260714T072500Z",
+        "sha256": "a92fc6fd72b8951ea6609c15d45934a88df137af57f85a59eced47753718f1e3"
+      },
+      {
+        "path": "/home/alex/pour-n-art/shared/.env.bak-before-disabled-cutover-20260714T074250Z",
+        "sha256": "a92fc6fd72b8951ea6609c15d45934a88df137af57f85a59eced47753718f1e3"
+      },
+      {
+        "path": "/home/alex/pour-n-art/shared/.env.bak-before-catalog-activation-20260714T074730Z",
+        "sha256": "3cab4e4a75ceae38fea25625a32673f900979c5fedaffe831afbb4cbdb449fa3"
+      }
+    ],
+    "database": [
+      {
+        "kind": "online-predeployment",
+        "path": "/home/alex/pour-n-art/backups/sqlite/pour-n-art-manual-20260714T072500Z.db",
+        "sha256": "cd915015eb91355b5732e0b6312c22af0b0d1f03ec445db2c2589336c25fc0db",
+        "bytes": 454656,
+        "integrity": "ok",
+        "mode": "600"
+      },
+      {
+        "kind": "quiesced-pre-migration",
+        "path": "/home/alex/pour-n-art/backups/sqlite/pour-n-art-manual-20260714T074330Z.db",
+        "sha256": "cd915015eb91355b5732e0b6312c22af0b0d1f03ec445db2c2589336c25fc0db",
+        "bytes": 454656,
+        "integrity": "ok",
+        "mode": "600"
+      }
+    ]
+  },
+  "migrationRehearsal": {
+    "path": "/home/alex/pour-n-art/backups/rehearsal/catalog-ops-20260714T072700Z/rehearsal.db",
+    "resultSha256": "b45bc9d4534d54e88cf04ffba9e619ac700f64eea5ccd9d1716e98d5b547d9e5",
+    "resultBytes": 540672,
+    "integrity": "ok",
+    "appliedMigrations": 8,
+    "restoreRehearsal": "passed",
+    "criticalRowCountsUnchanged": true,
+    "representativeQueriesPassed": true
+  },
+  "productionMigration": {
+    "result": "passed",
+    "migrationOnlyCommand": true,
+    "seedRun": false,
+    "migrationsAdded": [
+      "20260713150000_add_aurora_evaluations",
+      "20260714120500_add_aurora_reviews"
+    ],
+    "criticalRowCounts": {
+      "users": 4,
+      "products": 12,
+      "orders": 1,
+      "orderItems": 1,
+      "categories": 6
+    }
+  },
+  "pm2": {
+    "pourNArtPidBeforeDeployment": 139393,
+    "pourNArtPidAfterDisabledCutover": 167186,
+    "pourNArtPidDuringActivation": 167515,
+    "pourNArtPidAfterFailClosedDisable": 167697,
+    "unrelatedPidsUnchanged": true,
+    "unrelatedProcesses": {
+      "pullback": 134533,
+      "telegram-listener": 19571,
+      "webfoot-api": 19581
+    }
+  },
+  "disabledSmoke": {
+    "storefront": "passed",
+    "productListing": "passed",
+    "productDetail": "passed",
+    "emptyCartCheckout": "passed",
+    "authenticatedAdminDashboard": "passed",
+    "adminOrders": "passed",
+    "disabledAuroraHealth": "passed",
+    "customerAuroraEndpointAbsent": true,
+    "databaseIntegrity": "ok",
+    "unrelatedProcessesIsolated": true
+  },
+  "activationAttempt": {
+    "result": "failed-closed",
+    "authorization": {
+      "unauthenticatedStatus": 401,
+      "nonAdminStatus": 403,
+      "nonAllowlistedAdminStatus": 403,
+      "allowlistedAdminStatus": 200,
+      "customerEndpointStatus": 404
+    },
+    "runtimeHealth": {
+      "initialized": true,
+      "sdkVersion": "1.0.0-pilot.1",
       "projectId": "project.pna.catalog-intelligence-pilot",
-      "format": "aurora-project",
-      "formatVersion": 1,
-      "sha256": "952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c",
+      "bundleSha256": "952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c",
       "projectFingerprint": "0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b",
-      "productCount": 12
+      "issueCodes": [],
+      "bindingManifestFingerprintReported": false
     },
-    "bindingManifest": {
-      "sha256Fingerprint": "03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499",
-      "activeBindings": 12,
-      "awaitingReview": 0
-    },
-    "sdk": {
-      "version": "1.0.0-pilot.1",
-      "sourceCommit": "c69147e88a43dda5a475f22e6233a7df65299614",
-      "tarballSha256": "d526876e13c4e2fcb869bb51e351c8015a84ddc942f948d81cb914d4db701283"
-    },
-    "migrations": {
-      "count": 2,
-      "productionApplied": false,
-      "seedRequired": false
-    },
-    "externalActionsAuthorized": false,
-    "rollbackRelease": "/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9"
-  }
+    "blockingIssue": "HEALTH_BINDING_MANIFEST_FINGERPRINT_ABSENT",
+    "safetyAction": "pilot-disabled-and-pour-n-art-only-restarted",
+    "canaryRun": false,
+    "catalogEvaluationsRun": 0,
+    "temporarySmokeCredentialsRemoved": true,
+    "prohibitedLogKeywordMatches": 0
+  },
+  "backupSchedule": {
+    "installed": false,
+    "reason": "activation-stopped-before-stage-10"
+  },
+  "observation": {
+    "started": false,
+    "reason": "activation-stopped-before-stage-11"
+  },
+  "nextGate": "correct-health-binding-fingerprint-reporting-validate-deploy-and-obtain-renewed-activation-approval"
 }
