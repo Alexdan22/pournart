@@ -28,6 +28,7 @@ model User {
   emailQueue                 EmailQueue[]
   emailLogs                  EmailLog[]
   auroraEvaluationsRequested AuroraEvaluation[]    @relation("AuroraEvaluationRequestedBy")
+  auroraReviewEventsActor    AuroraReviewEvent[]   @relation("AuroraReviewEventActor")
 }
 
 model Address {
@@ -95,8 +96,8 @@ model Product {
 }
 
 model AuroraEvaluation {
-  id                            String   @id @default(cuid())
-  requestKey                    String   @unique
+  id                            String                   @id @default(cuid())
+  requestKey                    String                   @unique
   requestIdentityJson           String
   requestIdentityFingerprint    String
   operationType                 String
@@ -135,11 +136,12 @@ model AuroraEvaluation {
   resultBytes                   Int?
   status                        String
   failureStage                  String?
-  issueCodesJson                String   @default("[]")
+  issueCodesJson                String                   @default("[]")
   durationMs                    Int
-  createdAt                     DateTime @default(now())
-  product                       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  requestedBy                   User?    @relation("AuroraEvaluationRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  createdAt                     DateTime                 @default(now())
+  product                       Product?                 @relation(fields: [productId], references: [id], onDelete: SetNull)
+  requestedBy                   User?                    @relation("AuroraEvaluationRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+  reviews                       AuroraEvaluationReview[]
 
   @@index([productId, createdAt])
   @@index([productIdAtExecution, createdAt])
@@ -147,6 +149,42 @@ model AuroraEvaluation {
   @@index([bindingId, createdAt])
   @@index([batchRequestKey, batchItemIndex])
   @@index([requestedById, createdAt])
+}
+
+model AuroraEvaluationReview {
+  id           String              @id @default(cuid())
+  evaluationId String
+  targetKey    String
+  decisionId   String?
+  state        String              @default("NEW")
+  version      Int                 @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  evaluation   AuroraEvaluation    @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  events       AuroraReviewEvent[]
+
+  @@unique([evaluationId, targetKey])
+  @@index([evaluationId, decisionId])
+  @@index([state, updatedAt])
+}
+
+model AuroraReviewEvent {
+  id                         String                 @id @default(cuid())
+  requestKey                 String                 @unique
+  requestIdentityJson        String
+  requestIdentityFingerprint String
+  reviewId                   String
+  previousState              String
+  newState                   String
+  note                       String?
+  actorId                    String?
+  actorIdAtExecution         String
+  createdAt                  DateTime               @default(now())
+  review                     AuroraEvaluationReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  actor                      User?                  @relation("AuroraReviewEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([reviewId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model WishlistItem {

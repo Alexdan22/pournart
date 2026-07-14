@@ -56,3 +56,11 @@ npm run aurora:preview -- --manifest <candidate-binding-manifest.json> --bundle 
 The read-only preview reports additions, removals, changed bindings, duplicate identities, missing ProductDNA or RuleSet artifacts, checksum/fingerprint incompatibility, and resulting active/awaiting-review totals. It never writes the repository, database, or runtime configuration.
 
 Activation requires one reviewed release commit containing both files and their updated deployment checksums. The previous bundle and manifest are retained together in the previous application release. Rollback switches the application release pair together; mixing either file across releases is prohibited.
+
+## Review workflow and note safety
+
+Evaluation-level review begins as derived `NEW`. Decision-level review is created only when an admin explicitly transitions that exact Decision. The current `AuroraEvaluationReview` row and its append-only `AuroraReviewEvent` are written in one short serialized transaction with optimistic version checking. A newer evaluation never inherits review state.
+
+Review notes are limited to 2,000 characters. The server normalizes line endings and rejects prohibited control characters plus obvious email, phone, credential-label, bearer-token, JWT, and API-key patterns. This pattern detection is only a guardrail and cannot guarantee that sensitive data is absent. The UI therefore displays: “Do not enter customer information, passwords, tokens, credentials or secrets.”
+
+Notes are escaped by React and are never logged. They remain outside Aurora result JSON, DTOs, input snapshots, context/artifact fingerprints, cache identities, and operational exports. Only independently authorized ADMIN and allowlisted review routes return review history.

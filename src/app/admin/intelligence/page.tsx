@@ -7,7 +7,7 @@ import { getSession } from "@/lib/session";
 
 export default async function AdminIntelligencePage() {
   const access = currentAuroraAccess(await getSession());
-  const [products, evaluations] = await Promise.all([
+  const [products, evaluations, reviews] = await Promise.all([
     prisma.product.findMany({ orderBy: [{ updatedAt: "desc" }, { name: "asc" }] }),
     prisma.auroraEvaluation.findMany({
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -19,8 +19,12 @@ export default async function AdminIntelligencePage() {
         createdAt: true,
       },
     }),
+    prisma.auroraEvaluationReview.findMany({
+      where: { targetKey: "evaluation" },
+      select: { evaluationId: true, targetKey: true, state: true },
+    }),
   ]);
-  const coverage = buildAuroraCoverage(products, evaluations);
+  const coverage = buildAuroraCoverage(products, evaluations, reviews);
   const items: AuroraCatalogItem[] = coverage.items.map((item) => ({
     ...item,
     state:

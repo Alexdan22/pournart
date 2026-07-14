@@ -117,6 +117,18 @@ describe("catalog coverage", () => {
     ).toBe("stale");
     expect(buildAuroraCoverage([product], [failure]).items[0]!.evaluation).toBe("failed");
   });
+
+  it("reports the durable evaluation-level review state", () => {
+    const product = sampleProduct();
+    const binding = auroraProductBindings.find((entry) => entry.expectedSlug === product.slug)!;
+    const context = buildEvaluationContextIdentity(product, binding).applicationContextFingerprint;
+    const success = evaluation("reviewed", "SUCCEEDED", context, new Date("2026-07-13T10:00:00Z"));
+    const coverage = buildAuroraCoverage([product], [success], [
+      { evaluationId: success.id, targetKey: "evaluation", state: "NEEDS_CHANGES" },
+    ]);
+    expect(coverage.items[0]!.review).toBe("needs-changes");
+    expect(coverage.totals.review["needs-changes"]).toBe(1);
+  });
 });
 
 function sampleProduct(): AuroraCatalogProduct {

@@ -20,7 +20,7 @@ try {
     stdio: "pipe",
   });
 
-  const [{ PrismaClient }, adapter, database, applicationDatabase, persistence, identity, bindings] = await Promise.all([
+  const [{ PrismaClient }, adapter, database, applicationDatabase, persistence, identity, bindings, review] = await Promise.all([
     import("@prisma/client"),
     import("../src/lib/aurora/adapter"),
     import("../src/lib/aurora/database"),
@@ -28,6 +28,7 @@ try {
     import("../src/lib/aurora/persistence"),
     import("../src/lib/aurora/identity"),
     import("../src/lib/aurora/bindings"),
+    import("../src/lib/aurora/review"),
   ]);
   const client = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   const legacyUpgrade = await rehearseLegacyUpgrade(PrismaClient, directory, python);
@@ -94,6 +95,85 @@ try {
     requestMode: "REEVALUATE",
   });
   assert(first.state === "success" && first.evaluationId, "First evaluation did not persist.");
+  const reviewRequestKey = randomUUID();
+  const reviewNote = "Rehearsal review requires a structured catalog correction.";
+  const firstReview = await review.transitionAuroraReview({
+    evaluationId: first.evaluationId,
+    target: { scope: "evaluation" },
+    newState: "NEEDS_CHANGES",
+    expectedVersion: 0,
+    requestKey: reviewRequestKey,
+    actorId: adminId,
+    note: reviewNote,
+  });
+  const repeatedReview = await review.transitionAuroraReview({
+    evaluationId: first.evaluationId,
+    target: { scope: "evaluation" },
+    newState: "NEEDS_CHANGES",
+    expectedVersion: 0,
+    requestKey: reviewRequestKey,
+    actorId: adminId,
+    note: "This different note must not replace the immutable first event.",
+  });
+  assert(
+    firstReview.event.id === repeatedReview.event.id && repeatedReview.event.note === reviewNote,
+    "Review idempotency replaced an immutable event.",
+  );
+  await expectReviewCode(
+    () => review.transitionAuroraReview({
+      evaluationId: first.evaluationId!,
+      target: { scope: "evaluation" },
+      newState: "NEEDS_CHANGES",
+      expectedVersion: 0,
+      requestKey: reviewRequestKey,
+      actorId: "admin.other",
+      note: reviewNote,
+    }),
+    "IDEMPOTENCY_CONFLICT",
+  );
+  await expectReviewCode(
+    () => review.transitionAuroraReview({
+      evaluationId: first.evaluationId!,
+      target: { scope: "evaluation" },
+      newState: "ACCEPTED",
+      expectedVersion: 0,
+      requestKey: randomUUID(),
+      actorId: adminId,
+    }),
+    "REVIEW_VERSION_CONFLICT",
+  );
+  await expectReviewCode(
+    () => review.transitionAuroraReview({
+      evaluationId: first.evaluationId!,
+      target: { scope: "evaluation" },
+      newState: "NEEDS_CHANGES",
+      expectedVersion: 1,
+      requestKey: randomUUID(),
+      actorId: adminId,
+      note: reviewNote,
+    }),
+    "REVIEW_TRANSITION_INVALID",
+  );
+  await review.transitionAuroraReview({
+    evaluationId: first.evaluationId,
+    target: { scope: "evaluation" },
+    newState: "RESOLVED",
+    expectedVersion: 1,
+    requestKey: randomUUID(),
+    actorId: adminId,
+  });
+  const firstDetail = await review.getAuroraEvaluationDetail(first.evaluationId);
+  assert(firstDetail && firstDetail.decisions[0], "Evaluation detail did not expose a Decision target.");
+  await review.transitionAuroraReview({
+    evaluationId: first.evaluationId,
+    target: { scope: "decision", decisionId: firstDetail.decisions[0].id },
+    newState: "ACCEPTED",
+    expectedVersion: 0,
+    requestKey: randomUUID(),
+    actorId: adminId,
+  });
+  const storedFirst = await client.auroraEvaluation.findUniqueOrThrow({ where: { id: first.evaluationId } });
+  assert(!storedFirst.resultJson?.includes(reviewNote), "Review note leaked into Aurora result JSON.");
   const duplicate = await adapter.evaluateProductIntelligence(productId, {
     requestedById: adminId,
     requestKey,
@@ -217,6 +297,11 @@ try {
     refreshed.state === "success" && refreshed.evaluationId !== first.evaluationId,
     "Explicit re-evaluation did not append a new attempt.",
   );
+  const refreshedDetail = await review.getAuroraEvaluationDetail(refreshed.evaluationId!);
+  assert(
+    refreshedDetail?.evaluationReview.state === "NEW" && refreshedDetail.evaluationReview.version === 0,
+    "Review state carried forward automatically.",
+  );
   const failedProduct = await client.product.findUniqueOrThrow({ where: { id: productId } });
   const resolved = bindings.resolveAuroraBinding(failedProduct);
   assert(resolved.ok, "Fixture binding did not resolve.");
@@ -256,6 +341,8 @@ try {
   await client.product.delete({ where: { id: productId } });
   const historical = await client.auroraEvaluation.findMany({ where: { productIdAtExecution: productId } });
   assert(historical.length === 5 && historical.every((item) => item.productId === null), "Deletion history was not retained.");
+  assert((await client.auroraEvaluationReview.count()) === 2, "Review records were not retained.");
+  assert((await client.auroraReviewEvent.count()) === 3, "Review event history was not append-only.");
 
   await client.$disconnect();
   await database.auroraWriteClient.$disconnect();
@@ -292,7 +379,7 @@ try {
   console.log(
     JSON.stringify({
       ok: true,
-      migrations: 7,
+      migrations: 8,
       evaluations: historical.length,
       idempotencyConflict: true,
       concurrentDuplicate: true,
@@ -303,6 +390,7 @@ try {
       cacheResetPersistence: true,
       productDeletionHistory: true,
       backupRestore: true,
+      reviewWorkflow: { reviews: 2, events: 3, noCarryForward: true, notesOutsideAuroraJson: true },
       legacySixMigrationUpgrade: legacyUpgrade,
     }),
   );
@@ -316,6 +404,17 @@ try {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+async function expectReviewCode(operation: () => Promise<unknown>, code: string) {
+  try {
+    await operation();
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === code)
+      return;
+    throw error;
+  }
+  throw new Error(`Expected review error ${code}.`);
 }
 
 function holdExclusiveLock(databasePath: string, milliseconds: number) {
@@ -460,18 +559,49 @@ async function rehearseLegacyUpgrade(
     { recursive: true },
   );
   deploy();
+  const firstMigrationClient = new PrismaClient({ datasources: { db: { url: legacyUrl } } });
+  const evaluationsAfterFirstMigration = await firstMigrationClient.auroraEvaluation.count();
+  await firstMigrationClient.$disconnect();
+  const reviewMigration = "20260714120500_add_aurora_reviews";
+  cpSync(
+    join(process.cwd(), "prisma", "migrations", reviewMigration),
+    join(legacyMigrations, reviewMigration),
+    { recursive: true },
+  );
+  deploy();
   const upgradedClient = new PrismaClient({ datasources: { db: { url: legacyUrl } } });
-  const [users, products, orders, evaluations] = await Promise.all([
+  const [users, products, orders, evaluations, reviews, reviewEvents] = await Promise.all([
     upgradedClient.user.count(),
     upgradedClient.product.count(),
     upgradedClient.order.count(),
     upgradedClient.auroraEvaluation.count(),
+    upgradedClient.auroraEvaluationReview.count(),
+    upgradedClient.auroraReviewEvent.count(),
   ]);
   await upgradedClient.$disconnect();
   execFileSync(python, ["scripts/sqlite-backup.py", "verify", "--database", legacyDatabase], {
     cwd: process.cwd(),
     stdio: "pipe",
   });
-  assert(users === 1 && products === 1 && orders === 1 && evaluations === 0, "Legacy fixture upgrade changed representative rows.");
-  return { appliedBefore: 6, appliedAfter: 7, users, products, orders, evaluations };
+  assert(
+    users === 1 &&
+      products === 1 &&
+      orders === 1 &&
+      evaluationsAfterFirstMigration === 0 &&
+      evaluations === 0 &&
+      reviews === 0 &&
+      reviewEvents === 0,
+    "Legacy fixture upgrade changed representative rows.",
+  );
+  return {
+    appliedBefore: 6,
+    appliedAfterEvaluationMigration: 7,
+    appliedAfterReviewMigration: 8,
+    users,
+    products,
+    orders,
+    evaluations,
+    reviews,
+    reviewEvents,
+  };
 }

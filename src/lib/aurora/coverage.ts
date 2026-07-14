@@ -56,9 +56,16 @@ export type CoverageEvaluation = Pick<
   "id" | "productIdAtExecution" | "status" | "applicationContextFingerprint" | "createdAt"
 >;
 
+export type CoverageReview = Readonly<{
+  evaluationId: string;
+  targetKey: string;
+  state: string;
+}>;
+
 export function buildAuroraCoverage(
   products: readonly AuroraCatalogProduct[],
   evaluations: readonly CoverageEvaluation[],
+  reviews: readonly CoverageReview[] = [],
 ): { readonly items: readonly AuroraCoverageItem[]; readonly totals: AuroraCoverageTotals } {
   const histories = new Map<string, CoverageEvaluation[]>();
   for (const evaluation of evaluations) {
@@ -69,13 +76,21 @@ export function buildAuroraCoverage(
   for (const values of histories.values())
     values.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
 
-  const items = products.map((product) => coverageItem(product, histories.get(product.id) ?? []));
+  const reviewByEvaluation = new Map(
+    reviews
+      .filter((review) => review.targetKey === "evaluation")
+      .map((review) => [review.evaluationId, review.state]),
+  );
+  const items = products.map((product) =>
+    coverageItem(product, histories.get(product.id) ?? [], reviewByEvaluation),
+  );
   return Object.freeze({ items: Object.freeze(items), totals: totals(items) });
 }
 
 function coverageItem(
   product: AuroraCatalogProduct,
   history: readonly CoverageEvaluation[],
+  reviewByEvaluation: ReadonlyMap<string, string>,
 ): AuroraCoverageItem {
   const resolution = resolveAuroraBinding(product);
   const bindingState = bindingCoverageState(resolution);
@@ -91,13 +106,16 @@ function coverageItem(
     : undefined;
   const latest = history[0];
   const evaluation = evaluationCoverageState(latest, currentSuccess, successful.length > 0);
+  const reviewEvaluation = currentSuccess ?? successful[0];
   return Object.freeze({
     id: product.id,
     name: product.name,
     slug: product.slug,
     binding: bindingState,
     evaluation,
-    review: successful.length ? "new" : null,
+    review: reviewEvaluation
+      ? reviewCoverageState(reviewByEvaluation.get(reviewEvaluation.id))
+      : null,
     ready: reasons.length === 0,
     readinessReasons: Object.freeze(reasons),
     ...(binding
@@ -110,6 +128,13 @@ function coverageItem(
       : {}),
     manifestFingerprint: auroraBindingManifestFingerprint,
   });
+}
+
+function reviewCoverageState(value: string | undefined): ReviewCoverageState {
+  if (value === "ACCEPTED") return "accepted";
+  if (value === "NEEDS_CHANGES") return "needs-changes";
+  if (value === "RESOLVED") return "resolved";
+  return "new";
 }
 
 function bindingCoverageState(

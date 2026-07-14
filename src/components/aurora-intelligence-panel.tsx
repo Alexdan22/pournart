@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { AlertTriangle, CheckCircle2, ChevronRight, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
 import type { AuroraEvaluationView } from "@/lib/aurora/types";
@@ -125,6 +126,11 @@ function SuccessView({ value }: { value: Extract<AuroraEvaluationView, { state: 
           <Detail label="Output fingerprint" value={String(record(trace.outputFingerprint).value ?? "Unavailable")} />
         </dl>
       </details>
+      {value.evaluationId ? (
+        <Link className="admin-button ghost" href={`/admin/intelligence/evaluations/${value.evaluationId}`}>
+          Open durable evaluation and review
+        </Link>
+      ) : null}
     </div>
   );
 }
