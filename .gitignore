@@ -38,6 +38,10 @@ yarn-error.log*
 # local database and QA artifacts
 prisma/dev.db
 prisma/dev.db-journal
+backups/
+prisma/backups/
+pour-n-art-*-*.db
+pour-n-art-*-*.json
 qa-screenshots/
 
 # vercel

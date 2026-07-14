@@ -54,22 +54,23 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
     if (!ids.length) return;
     setProgress({ complete: 0, total: ids.length });
     startTransition(async () => {
-      const collected: AuroraEvaluationView[] = [];
-      for (let offset = 0; offset < ids.length; offset += 4) {
-        const chunk = ids.slice(offset, offset + 4);
-        try {
-          const response = await fetch("/api/admin/aurora/catalog/evaluate", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ productIds: chunk }),
-          });
-          const body = (await response.json()) as { results?: AuroraEvaluationView[] };
-          collected.push(...(body.results ?? chunk.map((productId) => clientFailure(productId))));
-        } catch {
-          collected.push(...chunk.map((productId) => clientFailure(productId)));
-        }
-        setProgress({ complete: Math.min(offset + chunk.length, ids.length), total: ids.length });
+      let collected: AuroraEvaluationView[];
+      try {
+        const response = await fetch("/api/admin/aurora/catalog/evaluate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            batchRequestKey: crypto.randomUUID(),
+            productIds: ids,
+            mode: "reuse-current",
+          }),
+        });
+        const body = (await response.json()) as { results?: AuroraEvaluationView[] };
+        collected = body.results ?? ids.map((productId) => clientFailure(productId));
+      } catch {
+        collected = ids.map((productId) => clientFailure(productId));
       }
+      setProgress({ complete: ids.length, total: ids.length });
       const byId = new Map(collected.map((result) => [result.productId, stateFor(result)]));
       setItems((current) => current.map((item) => (byId.has(item.id) ? { ...item, state: byId.get(item.id)! } : item)));
     });

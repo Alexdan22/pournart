@@ -2,10 +2,12 @@ import "server-only";
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import deployment from "../../../vendor/aurora/deployment-manifest.json";
 import { initializeAurora, sha256 } from "./initializer";
 
 const artifactDirectory = join(process.cwd(), "vendor", "aurora");
+const deployment = JSON.parse(
+  readFileSync(join(artifactDirectory, "deployment-manifest.json"), "utf8"),
+);
 
 function loadRuntime() {
   try {

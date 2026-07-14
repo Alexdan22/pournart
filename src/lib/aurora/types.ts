@@ -33,6 +33,8 @@ export type AuroraInitializationHealth = Readonly<{
 export type AuroraEvaluationView =
   | Readonly<{ state: "missing-product" | "no-binding" | "stale-binding" | "unsupported-product"; message: string; productId?: string }>
   | Readonly<{ state: "runtime-failure"; message: string; productId: string; health: AuroraInitializationHealth }>
+  | Readonly<{ state: "persistence-failure"; message: string; productId: string; issueCode: string }>
+  | Readonly<{ state: "idempotency-conflict"; message: string; productId: string; issueCode: "IDEMPOTENCY_CONFLICT" }>
   | Readonly<{ state: "validation-failure"; message: string; productId: string; binding: AuroraProductBinding; response: AuroraIntelligenceResponseDto }>
   | Readonly<{
       state: "success";
@@ -43,6 +45,9 @@ export type AuroraEvaluationView =
       response: AuroraIntelligenceResponseDto;
       health: AuroraInitializationHealth;
       evaluatedAt: string;
+      evaluationId?: string;
+      requestKey?: string;
+      lookupSource?: "process-cache" | "database" | "runtime";
     }>;
 
 export type AuroraCatalogState =

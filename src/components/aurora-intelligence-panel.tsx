@@ -16,6 +16,10 @@ export function AuroraIntelligencePanel({ productId, initialState }: { productId
         const response = await fetch(`/api/admin/aurora/products/${encodeURIComponent(productId)}/evaluate`, {
           method: "POST",
           headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            requestKey: crypto.randomUUID(),
+            mode: state.state === "success" ? "re-evaluate" : "reuse-current",
+          }),
         });
         const body = (await response.json()) as { result?: AuroraEvaluationView; error?: string };
         if (response.status === 401 || response.status === 403 || response.status === 404 && !body.result) {
@@ -64,6 +68,8 @@ function PanelContent({ state }: { state: PanelState }) {
     "unsupported-product": { title: "Intelligence is not supplied", tone: "neutral" },
     "validation-failure": { title: "Intelligence validation failed", tone: "warning" },
     "runtime-failure": { title: "Aurora is unavailable", tone: "warning" },
+    "persistence-failure": { title: "Evaluation was not stored", tone: "warning" },
+    "idempotency-conflict": { title: "Request conflict", tone: "warning" },
     "authorization-failure": { title: "Pilot access denied", tone: "warning" },
   };
   const display = messages[state.state];

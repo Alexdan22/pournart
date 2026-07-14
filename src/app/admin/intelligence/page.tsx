@@ -9,6 +9,11 @@ import { getSession } from "@/lib/session";
 export default async function AdminIntelligencePage() {
   const access = currentAuroraAccess(await getSession());
   const products = await prisma.product.findMany({ orderBy: [{ updatedAt: "desc" }, { name: "asc" }] });
+  const latestByProduct = new Map(
+    await Promise.all(
+      products.map(async (product) => [product.id, await getLatestProductIntelligence(product.id)] as const),
+    ),
+  );
   const items: AuroraCatalogItem[] = products.map((product) => {
     const binding = resolveAuroraBinding(product);
     const blockers = [
@@ -25,7 +30,7 @@ export default async function AdminIntelligencePage() {
       productDnaPresent: binding.ok,
       ready: binding.ok && blockers.length === 0,
       blockers,
-      state: binding.ok ? summarizeAuroraEvaluation(getLatestProductIntelligence(product.id)) : "unbound",
+      state: binding.ok ? summarizeAuroraEvaluation(latestByProduct.get(product.id)) : "unbound",
     };
   });
   return (

@@ -18,7 +18,7 @@ export default async function ProductIntelligencePage({ params }: { params: Prom
     const binding = resolveAuroraBinding(product);
     if (!binding.ok) state = { state: binding.state, message: binding.message, productId: product.id };
     else if (!auroraInitialization.ok) state = { state: "runtime-failure", message: "The Aurora bundle did not pass initialization.", productId: product.id, health: auroraInitialization.health };
-    else state = getLatestProductIntelligence(product.id) ?? { state: "not-evaluated", message: "The binding and runtime are valid. Execute Aurora to see current Decisions." };
+    else state = await getLatestProductIntelligence(product.id) ?? { state: "not-evaluated", message: "The binding and runtime are valid. Execute Aurora to see current Decisions." };
   }
   return (
     <section className="admin-route">

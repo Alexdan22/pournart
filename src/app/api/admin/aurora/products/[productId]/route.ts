@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: { params: Promise<{ produc
   if (!product)
     return NextResponse.json({ ok: false, state: "missing-product", error: "Product not found." }, { status: 404 });
   const binding = resolveAuroraBinding(product);
-  const latest = getLatestProductIntelligence(product.id);
+  const latest = await getLatestProductIntelligence(product.id);
   return NextResponse.json({
     ok: true,
     product,

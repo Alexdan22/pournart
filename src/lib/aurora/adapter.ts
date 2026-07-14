@@ -3,18 +3,180 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { buildAuroraExplicitReferences } from "./assertions";
 import { resolveAuroraBinding } from "./bindings";
-import { loadAndEvaluateProduct } from "./evaluation";
+import {
+  buildEvaluationContextIdentity,
+  createRequestKey,
+  serializeRequestIdentity,
+  sha256,
+  type AuroraOperationType,
+  type AuroraRequestMode,
+  type EvaluationRequestIdentity,
+} from "./identity";
+import {
+  cacheEvaluation,
+  cachedEvaluation,
+  clearPersistedEvaluationCache,
+  evaluationFromRecord,
+  findCurrentSuccessfulEvaluation,
+  findEvaluationByRequestKey,
+  findLatestEvaluationAttempt,
+  persistEvaluation,
+} from "./persistence";
+import { AuroraIdempotencyConflictError, withEvaluationSingleFlight } from "./idempotency";
+import { AuroraPersistenceBusyError } from "./database";
 import { auroraInitialization } from "./runtime";
 import type { AuroraCatalogProduct, AuroraEvaluationView } from "./types";
 
-const latestResults = new Map<string, AuroraEvaluationView>();
+export type EvaluateProductOptions = Readonly<{
+  requestedById: string;
+  requestKey?: string;
+  requestMode?: AuroraRequestMode;
+  operationType?: AuroraOperationType;
+  trigger?: string;
+  batchRequestKey?: string;
+  batchIdentityFingerprint?: string;
+  batchItemIndex?: number;
+  batchSize?: number;
+}>;
 
-export async function evaluateProductIntelligence(productId: string): Promise<AuroraEvaluationView> {
-  return loadAndEvaluateProduct(
-    productId,
-    (id) => prisma.product.findUnique({ where: { id } }),
-    evaluateCatalogProduct,
-  );
+export async function evaluateProductIntelligence(
+  productId: string,
+  options: EvaluateProductOptions,
+): Promise<AuroraEvaluationView> {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product)
+    return { state: "missing-product", message: "Product not found.", productId };
+  const bindingResolution = resolveAuroraBinding(product);
+  if (!bindingResolution.ok)
+    return { state: bindingResolution.state, message: bindingResolution.message, productId: product.id };
+
+  const requestKey = options.requestKey ?? createRequestKey();
+  const requestMode = options.requestMode ?? "REUSE_CURRENT";
+  const context = buildEvaluationContextIdentity(product, bindingResolution.binding);
+  const requestIdentity: EvaluationRequestIdentity = Object.freeze({
+    operationType: options.operationType ?? "PRODUCT_EVALUATION",
+    requestMode,
+    productId: product.id,
+    productSlug: product.slug,
+    bindingId: bindingResolution.binding.bindingId,
+    bindingFingerprint: context.bindingFingerprint,
+    applicationContextFingerprint: context.applicationContextFingerprint,
+    requestedById: options.requestedById,
+    ...(options.batchRequestKey ? { batchRequestKey: options.batchRequestKey } : {}),
+    ...(options.batchIdentityFingerprint
+      ? { batchIdentityFingerprint: options.batchIdentityFingerprint }
+      : {}),
+    ...(options.batchItemIndex === undefined ? {} : { batchItemIndex: options.batchItemIndex }),
+    ...(options.batchSize === undefined ? {} : { batchSize: options.batchSize }),
+  });
+  const requestIdentityFingerprint = serializeRequestIdentity(requestIdentity).fingerprint;
+
+  return withEvaluationSingleFlight(requestKey, requestIdentityFingerprint, async () => {
+    try {
+      const existing = await findEvaluationByRequestKey(requestKey);
+      if (existing) {
+        const expected = serializeRequestIdentity(requestIdentity).fingerprint;
+        if (existing.requestIdentityFingerprint !== expected) throw new AuroraIdempotencyConflictError();
+        return evaluationFromRecord(existing, bindingResolution.binding, "database");
+      }
+      if (requestMode === "REUSE_CURRENT") {
+        const cached = cachedEvaluation(context.applicationContextFingerprint);
+        if (cached) return cached;
+        const persisted = await findCurrentSuccessfulEvaluation(
+          product.id,
+          context.applicationContextFingerprint,
+        );
+        if (persisted) {
+          const view = evaluationFromRecord(persisted, bindingResolution.binding, "database");
+          cacheEvaluation(context.applicationContextFingerprint, view);
+          return view;
+        }
+      }
+      if (!auroraInitialization.ok)
+        return {
+          state: "runtime-failure",
+          message: "Aurora is unavailable because its validated project could not be initialized.",
+          productId: product.id,
+          health: auroraInitialization.health,
+        };
+
+      const startedAt = performance.now();
+      const response = auroraInitialization.service.execute({
+        ruleSet: { kind: "ruleset", artifactId: bindingResolution.binding.ruleSetArtifactId },
+        product: { kind: "product-dna", artifactId: bindingResolution.binding.productDnaArtifactId },
+        explicitReferences: buildAuroraExplicitReferences(product, bindingResolution.binding),
+      });
+      const record = await persistEvaluation({
+        product,
+        binding: bindingResolution.binding,
+        context,
+        requestKey,
+        requestIdentity,
+        trigger: options.trigger ?? "product",
+        response,
+        durationMs: performance.now() - startedAt,
+      });
+      const view = evaluationFromRecord(record, bindingResolution.binding, "runtime");
+      cacheEvaluation(context.applicationContextFingerprint, view);
+      console.info(
+        JSON.stringify({
+          event: "aurora.product-evaluation",
+          productId: product.id,
+          bindingId: bindingResolution.binding.bindingId,
+          projectId: bindingResolution.binding.projectId,
+          stage: response.ok ? "success" : response.stage,
+          lookupSource: "runtime",
+        }),
+      );
+      return view;
+    } catch (error) {
+      if (error instanceof AuroraIdempotencyConflictError) {
+        console.info(
+          JSON.stringify({
+            event: "aurora.idempotency-conflict",
+            issueCode: error.code,
+            requestKeyHash: sha256(requestKey).slice(0, 12),
+            productId: product.id,
+          }),
+        );
+        return {
+          state: "idempotency-conflict",
+          productId: product.id,
+          issueCode: "IDEMPOTENCY_CONFLICT",
+          message: "This request key belongs to a different evaluation request.",
+        };
+      }
+      if (error instanceof AuroraPersistenceBusyError)
+        return {
+          state: "persistence-failure",
+          productId: product.id,
+          issueCode: error.code,
+          message: "Aurora completed no durable write because the evaluation database was busy.",
+        };
+      return {
+        state: "persistence-failure",
+        productId: product.id,
+        issueCode: "AURORA_PERSISTENCE_FAILURE",
+        message: "Aurora could not store this evaluation. Storefront and checkout remain available.",
+      };
+    }
+  }).catch((error: unknown) => {
+    if (!(error instanceof AuroraIdempotencyConflictError)) throw error;
+    console.info(
+      JSON.stringify({
+        event: "aurora.idempotency-conflict",
+        issueCode: error.code,
+        requestKeyHash: sha256(requestKey).slice(0, 12),
+        productId: product.id,
+      }),
+    );
+    return {
+      state: "idempotency-conflict" as const,
+      productId: product.id,
+      issueCode: "IDEMPOTENCY_CONFLICT" as const,
+      message: "This request key belongs to a different evaluation request.",
+    };
+  });
 }
 
 export function evaluateCatalogProduct(product: AuroraCatalogProduct): AuroraEvaluationView {
@@ -33,28 +195,15 @@ export function evaluateCatalogProduct(product: AuroraCatalogProduct): AuroraEva
     product: { kind: "product-dna", artifactId: resolved.binding.productDnaArtifactId },
     explicitReferences: buildAuroraExplicitReferences(product, resolved.binding),
   });
-  console.info(
-    JSON.stringify({
-      event: "aurora.product-evaluation",
-      productId: product.id,
-      bindingId: resolved.binding.bindingId,
-      projectId: resolved.binding.projectId,
-      artifactIds: [resolved.binding.productDnaArtifactId, resolved.binding.ruleSetArtifactId],
-      stage: response.ok ? "success" : response.stage,
-    }),
-  );
-  if (!response.ok) {
-    const failure: AuroraEvaluationView = {
+  if (!response.ok)
+    return {
       state: "validation-failure",
       message: "Aurora could not validate or execute this approved product binding.",
       productId: product.id,
       binding: resolved.binding,
       response,
     };
-    remember(product.id, failure);
-    return failure;
-  }
-  const success: AuroraEvaluationView = {
+  return {
     state: "success",
     productId: product.id,
     slug: product.slug,
@@ -63,23 +212,28 @@ export function evaluateCatalogProduct(product: AuroraCatalogProduct): AuroraEva
     response,
     health: auroraInitialization.health,
     evaluatedAt: new Date().toISOString(),
+    lookupSource: "runtime",
   };
-  remember(product.id, success);
-  return success;
 }
 
-export function getLatestProductIntelligence(productId: string) {
-  return latestResults.get(productId);
+export async function getLatestProductIntelligence(productId: string) {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) return undefined;
+  const resolved = resolveAuroraBinding(product);
+  if (!resolved.ok) return undefined;
+  const context = buildEvaluationContextIdentity(product, resolved.binding);
+  const cached = cachedEvaluation(context.applicationContextFingerprint);
+  if (cached) return cached;
+  const current = await findCurrentSuccessfulEvaluation(product.id, context.applicationContextFingerprint);
+  if (current) {
+    const view = evaluationFromRecord(current, resolved.binding, "database");
+    cacheEvaluation(context.applicationContextFingerprint, view);
+    return view;
+  }
+  const latest = await findLatestEvaluationAttempt(product.id);
+  return latest ? evaluationFromRecord(latest, resolved.binding, "database") : undefined;
 }
 
 export function clearLatestProductIntelligence() {
-  latestResults.clear();
-}
-
-function remember(productId: string, value: AuroraEvaluationView) {
-  if (!latestResults.has(productId) && latestResults.size >= 200) {
-    const oldest = latestResults.keys().next().value;
-    if (oldest) latestResults.delete(oldest);
-  }
-  latestResults.set(productId, value);
+  clearPersistedEvaluationCache();
 }

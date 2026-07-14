@@ -110,27 +110,6 @@ describe("Aurora runtime initialization and cache", () => {
     expect(cache.get("bundle-a:one")).toBeUndefined();
     expect(cache.get("bundle-b:one")).toBe(response);
 
-    const initialized = validInitialization();
-    if (!initialized.ok) throw new Error("Expected valid initialization.");
-    const base = {
-      ruleSet: { kind: "ruleset" as const, artifactId: "artifact.pna.ruleset.catalog-readiness" },
-      product: { kind: "product-dna" as const, artifactId: "artifact.pna.product.ocean-bloom-coaster-set" },
-    };
-    initialized.service.execute(base);
-    initialized.service.execute({
-      ...base,
-      explicitReferences: [
-        {
-          kind: "domain-concept" as const,
-          id: "catalog.information.complete",
-          sourceKind: "test",
-          sourceId: "product.one",
-          fieldPath: "complete",
-          sourceValue: true,
-        },
-      ],
-    });
-    expect(initialized.cache.size).toBe(2);
   });
 
   it("logs only operational identifiers, issue codes, fingerprints, and duration", () => {

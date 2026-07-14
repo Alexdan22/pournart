@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { AuroraRuntime } from "@aurora/sdk";
 import { AuroraApplicationService } from "@aurora/sdk/integration";
-import { BoundedFifoCache } from "./cache";
 import type { AuroraInitializationHealth } from "./types";
 
 export type AuroraLogEvent = Readonly<Record<string, unknown>>;
@@ -53,9 +52,7 @@ export function initializeAurora(input: {
   if (fingerprint !== input.expectedProjectFingerprint)
     return { ok: false as const, health: healthFailure(base, ["PROJECT_FINGERPRINT_MISMATCH"], fingerprint) };
 
-  const cache = new BoundedFifoCache(200);
   const service = new AuroraApplicationService(loaded.runtime, {
-    cache,
     log(event) {
       input.log?.({ event: "aurora.intelligence", ...event });
     },
@@ -64,7 +61,6 @@ export function initializeAurora(input: {
     ok: true as const,
     runtime: loaded.runtime,
     service,
-    cache,
     health: Object.freeze({ ...base, ok: true, projectFingerprint: fingerprint, issueCodes: Object.freeze([]) }) satisfies AuroraInitializationHealth,
   };
 }

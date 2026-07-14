@@ -9,24 +9,25 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  phone        String?
-  passwordHash String
-  role         String    @default("CUSTOMER")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  addresses    Address[]
-  orders       Order[]
-  wishlist     WishlistItem[]
-  reviews      Review[]
-  internalNotes InternalNote[]
-  notesAuthored InternalNote[] @relation("InternalNoteAuthor")
-  inventoryAdjustments InventoryAdjustment[]
-  analyticsEvents AnalyticsEvent[]
-  emailQueue   EmailQueue[]
-  emailLogs    EmailLog[]
+  id                         String                @id @default(cuid())
+  name                       String
+  email                      String                @unique
+  phone                      String?
+  passwordHash               String
+  role                       String                @default("CUSTOMER")
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  addresses                  Address[]
+  orders                     Order[]
+  wishlist                   WishlistItem[]
+  reviews                    Review[]
+  internalNotes              InternalNote[]
+  notesAuthored              InternalNote[]        @relation("InternalNoteAuthor")
+  inventoryAdjustments       InventoryAdjustment[]
+  analyticsEvents            AnalyticsEvent[]
+  emailQueue                 EmailQueue[]
+  emailLogs                  EmailLog[]
+  auroraEvaluationsRequested AuroraEvaluation[]    @relation("AuroraEvaluationRequestedBy")
 }
 
 model Address {
@@ -47,49 +48,105 @@ model Address {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  description String
-  imageUrl    String?
-  shippingFee Int       @default(0)
-  isActive    Boolean   @default(true)
-  isFeatured  Boolean   @default(false)
-  metaTitle   String?
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  description     String
+  imageUrl        String?
+  shippingFee     Int       @default(0)
+  isActive        Boolean   @default(true)
+  isFeatured      Boolean   @default(false)
+  metaTitle       String?
   metaDescription String?
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  products    Product[]
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  products        Product[]
 }
 
 model Product {
-  id                  String      @id @default(cuid())
-  categoryId          String
-  name                String
-  slug                String      @unique
-  description         String
-  story               String
-  price               Int
-  compareAtPrice      Int?
-  imageUrl            String
-  inventory           Int         @default(0)
-  lowStockThreshold   Int         @default(3)
-  adminStatus         String      @default("PUBLISHED")
-  archivedAt          DateTime?
-  isFeatured          Boolean     @default(false)
-  isActive            Boolean     @default(true)
-  handmadeDaysMin     Int         @default(5)
-  handmadeDaysMax     Int         @default(12)
-  customizationFields String      @default("[]")
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  category            Category    @relation(fields: [categoryId], references: [id])
-  orderItems          OrderItem[]
-  wishlistItems       WishlistItem[]
-  reviews             Review[]
+  id                   String                @id @default(cuid())
+  categoryId           String
+  name                 String
+  slug                 String                @unique
+  description          String
+  story                String
+  price                Int
+  compareAtPrice       Int?
+  imageUrl             String
+  inventory            Int                   @default(0)
+  lowStockThreshold    Int                   @default(3)
+  adminStatus          String                @default("PUBLISHED")
+  archivedAt           DateTime?
+  isFeatured           Boolean               @default(false)
+  isActive             Boolean               @default(true)
+  handmadeDaysMin      Int                   @default(5)
+  handmadeDaysMax      Int                   @default(12)
+  customizationFields  String                @default("[]")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  category             Category              @relation(fields: [categoryId], references: [id])
+  orderItems           OrderItem[]
+  wishlistItems        WishlistItem[]
+  reviews              Review[]
   inventoryAdjustments InventoryAdjustment[]
-  analyticsEvents     AnalyticsEvent[]
+  analyticsEvents      AnalyticsEvent[]
+  auroraEvaluations    AuroraEvaluation[]
+}
+
+model AuroraEvaluation {
+  id                            String   @id @default(cuid())
+  requestKey                    String   @unique
+  requestIdentityJson           String
+  requestIdentityFingerprint    String
+  operationType                 String
+  requestMode                   String
+  trigger                       String
+  requestedById                 String?
+  requestedByIdAtExecution      String
+  batchRequestKey               String?
+  batchIdentityFingerprint      String?
+  batchItemIndex                Int?
+  batchSize                     Int?
+  productId                     String?
+  productIdAtExecution          String
+  productSlug                   String
+  productName                   String
+  bindingId                     String
+  bindingFingerprint            String
+  bindingManifestFingerprint    String
+  projectId                     String
+  bundleFingerprint             String
+  bundleSha256                  String
+  sdkVersion                    String
+  runtimeContractsJson          String
+  productDnaArtifactId          String
+  productDnaProductId           String
+  productDnaFingerprint         String?
+  ruleSetArtifactId             String
+  ruleSetDomainId               String
+  ruleSetFingerprint            String?
+  applicationContextFingerprint String
+  auroraInputFingerprint        String?
+  auroraOutputFingerprint       String?
+  inputSnapshotJson             String
+  resultJson                    String?
+  resultSha256                  String?
+  resultBytes                   Int?
+  status                        String
+  failureStage                  String?
+  issueCodesJson                String   @default("[]")
+  durationMs                    Int
+  createdAt                     DateTime @default(now())
+  product                       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  requestedBy                   User?    @relation("AuroraEvaluationRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  @@index([productId, createdAt])
+  @@index([productIdAtExecution, createdAt])
+  @@index([applicationContextFingerprint, status, createdAt])
+  @@index([bindingId, createdAt])
+  @@index([batchRequestKey, batchItemIndex])
+  @@index([requestedById, createdAt])
 }
 
 model WishlistItem {
@@ -121,54 +178,54 @@ model Coupon {
 }
 
 model Order {
-  id                 String          @id @default(cuid())
-  orderNumber        String          @unique
-  userId             String
-  status             String          @default("PLACED")
-  paymentStatus      String          @default("PENDING")
-  currency           String          @default("INR")
-  subtotal           Int
-  shippingFee        Int
-  shippingCharge     Int             @default(0)
-  discount           Int             @default(0)
-  total              Int
-  customNotes        String?
-  deliveryName       String
-  deliveryPhone      String
-  deliveryLine1      String
-  deliveryLine2      String?
-  deliveryCity       String
-  deliveryState      String
-  deliveryPincode    String
-  razorpayOrderId    String?
-  razorpayPaymentId  String?
-  razorpaySignature  String?
-  shiprocketOrderId  String?
+  id                   String           @id @default(cuid())
+  orderNumber          String           @unique
+  userId               String
+  status               String           @default("PLACED")
+  paymentStatus        String           @default("PENDING")
+  currency             String           @default("INR")
+  subtotal             Int
+  shippingFee          Int
+  shippingCharge       Int              @default(0)
+  discount             Int              @default(0)
+  total                Int
+  customNotes          String?
+  deliveryName         String
+  deliveryPhone        String
+  deliveryLine1        String
+  deliveryLine2        String?
+  deliveryCity         String
+  deliveryState        String
+  deliveryPincode      String
+  razorpayOrderId      String?
+  razorpayPaymentId    String?
+  razorpaySignature    String?
+  shiprocketOrderId    String?
   shiprocketShipmentId String?
-  awbCode            String?
-  courierCompanyId   Int?
-  courierName        String?
-  courierTrackingId  String?
-  courierTrackingUrl String?
-  pickupPincode      String?
-  estimatedDelivery  DateTime?
-  shipmentStatus     String?
-  trackingUrl        String?
-  trackingEvents     String          @default("[]")
-  pickupGenerated    Boolean         @default(false)
-  shipmentError      String?
-  shippedAt          DateTime?
-  deliveredAt        DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  user               User            @relation(fields: [userId], references: [id])
-  items              OrderItem[]
-  timeline           OrderTimeline[]
-  internalNotes      InternalNote[]
-  emailQueue         EmailQueue[]
-  emailLogs          EmailLog[]
-  reviews            Review[]
-  analyticsEvents    AnalyticsEvent[]
+  awbCode              String?
+  courierCompanyId     Int?
+  courierName          String?
+  courierTrackingId    String?
+  courierTrackingUrl   String?
+  pickupPincode        String?
+  estimatedDelivery    DateTime?
+  shipmentStatus       String?
+  trackingUrl          String?
+  trackingEvents       String           @default("[]")
+  pickupGenerated      Boolean          @default(false)
+  shipmentError        String?
+  shippedAt            DateTime?
+  deliveredAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  user                 User             @relation(fields: [userId], references: [id])
+  items                OrderItem[]
+  timeline             OrderTimeline[]
+  internalNotes        InternalNote[]
+  emailQueue           EmailQueue[]
+  emailLogs            EmailLog[]
+  reviews              Review[]
+  analyticsEvents      AnalyticsEvent[]
 
   @@index([shiprocketShipmentId])
   @@index([awbCode])
@@ -176,15 +233,15 @@ model Order {
 }
 
 model OrderItem {
-  id              String  @id @default(cuid())
+  id              String   @id @default(cuid())
   orderId         String
   productId       String?
   productName     String
   productImageUrl String
   unitPrice       Int
   quantity        Int
-  customization   String  @default("{}")
-  order           Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customization   String   @default("{}")
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   reviews         Review[]
 }
@@ -214,27 +271,27 @@ model Banner {
 }
 
 model EmailQueue {
-  id          String    @id @default(cuid())
-  orderId     String?
-  userId      String?
+  id               String          @id @default(cuid())
+  orderId          String?
+  userId           String?
   contactEnquiryId String?
-  event       String
-  recipient   String
-  subject     String
-  template    String
-  payload     String
-  status      String    @default("PENDING")
-  attempts    Int       @default(0)
-  maxAttempts Int       @default(3)
-  lastError   String?
-  scheduledAt DateTime  @default(now())
-  sentAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  logs        EmailLog[]
-  order       Order?     @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  contactEnquiry ContactEnquiry? @relation(fields: [contactEnquiryId], references: [id], onDelete: SetNull)
+  event            String
+  recipient        String
+  subject          String
+  template         String
+  payload          String
+  status           String          @default("PENDING")
+  attempts         Int             @default(0)
+  maxAttempts      Int             @default(3)
+  lastError        String?
+  scheduledAt      DateTime        @default(now())
+  sentAt           DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  logs             EmailLog[]
+  order            Order?          @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  contactEnquiry   ContactEnquiry? @relation(fields: [contactEnquiryId], references: [id], onDelete: SetNull)
 
   @@index([status, scheduledAt])
   @@index([event])
@@ -245,20 +302,20 @@ model EmailQueue {
 }
 
 model EmailLog {
-  id           String     @id @default(cuid())
-  queueId      String?
-  orderId      String?
-  userId       String?
-  event        String
-  recipient    String
-  subject      String
-  status       String
-  providerResponse String?    @map("smtpResponse")
-  error        String?
-  createdAt    DateTime   @default(now())
-  queue        EmailQueue? @relation(fields: [queueId], references: [id], onDelete: SetNull)
-  order        Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id               String      @id @default(cuid())
+  queueId          String?
+  orderId          String?
+  userId           String?
+  event            String
+  recipient        String
+  subject          String
+  status           String
+  providerResponse String?     @map("smtpResponse")
+  error            String?
+  createdAt        DateTime    @default(now())
+  queue            EmailQueue? @relation(fields: [queueId], references: [id], onDelete: SetNull)
+  order            Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  user             User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([queueId])
   @@index([orderId])
@@ -296,7 +353,7 @@ model Review {
 }
 
 model ContactEnquiry {
-  id               String     @id @default(cuid())
+  id               String         @id @default(cuid())
   name             String
   email            String?
   phone            String
@@ -305,10 +362,10 @@ model ContactEnquiry {
   budget           String
   message          String
   referenceFileUrl String?
-  status           String     @default("NEW")
-  source           String     @default("CONTACT_FORM")
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  status           String         @default("NEW")
+  source           String         @default("CONTACT_FORM")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   internalNotes    InternalNote[]
   emailQueue       EmailQueue[]
 
@@ -318,7 +375,7 @@ model ContactEnquiry {
 }
 
 model InternalNote {
-  id               String     @id @default(cuid())
+  id               String          @id @default(cuid())
   targetType       String
   targetId         String
   orderId          String?
@@ -327,11 +384,11 @@ model InternalNote {
   reviewId         String?
   authorId         String?
   content          String
-  createdAt        DateTime   @default(now())
-  order            Order?     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  user             User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  order            Order?          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   contactEnquiry   ContactEnquiry? @relation(fields: [contactEnquiryId], references: [id], onDelete: Cascade)
-  author           User?      @relation("InternalNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  author           User?           @relation("InternalNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([targetType, targetId])
   @@index([orderId])
@@ -353,48 +410,48 @@ model Notification {
   createdAt  DateTime  @default(now())
   readAt     DateTime?
 
+  @@unique([type, sourceType, sourceId])
   @@index([status, createdAt])
   @@index([type])
-  @@unique([type, sourceType, sourceId])
 }
 
 model InventoryAdjustment {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   productId String
   delta     Int
   reason    String
   note      String?
   actorId   String?
-  createdAt DateTime  @default(now())
-  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  actor     User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([productId, createdAt])
 }
 
 model StoreSetting {
-  key       String    @id
+  key       String   @id
   group     String
   label     String
   value     String
-  valueType String    @default("text")
-  updatedAt DateTime  @updatedAt
+  valueType String   @default("text")
+  updatedAt DateTime @updatedAt
 
   @@index([group])
 }
 
 model AnalyticsEvent {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   event     String
   sessionId String?
   userId    String?
   productId String?
   orderId   String?
-  metadata  String    @default("{}")
-  createdAt DateTime  @default(now())
-  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  product   Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
-  order     Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  metadata  String   @default("{}")
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   @@index([event, createdAt])
   @@index([sessionId])
