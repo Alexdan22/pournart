@@ -105,5 +105,37 @@
       "checkoutHealthy": true,
       "adminHealthy": true
     }
+  },
+  "catalogOperationsCandidate": {
+    "status": "local-not-deployed",
+    "branch": "codex/aurora-catalog-operations",
+    "auroraCommit": "df5d6b3122fedf0890ed75435ad93c7c21eeed73",
+    "pourNArtParentCommit": "e877ddf2725e99df3c7bd73897221ff5395c2596",
+    "pourNArtCommitRef": "chore(aurora): roll out catalog operations bundle",
+    "bundle": {
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "format": "aurora-project",
+      "formatVersion": 1,
+      "sha256": "952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c",
+      "projectFingerprint": "0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b",
+      "productCount": 12
+    },
+    "bindingManifest": {
+      "sha256Fingerprint": "03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499",
+      "activeBindings": 12,
+      "awaitingReview": 0
+    },
+    "sdk": {
+      "version": "1.0.0-pilot.1",
+      "sourceCommit": "c69147e88a43dda5a475f22e6233a7df65299614",
+      "tarballSha256": "d526876e13c4e2fcb869bb51e351c8015a84ddc942f948d81cb914d4db701283"
+    },
+    "migrations": {
+      "count": 2,
+      "productionApplied": false,
+      "seedRequired": false
+    },
+    "externalActionsAuthorized": false,
+    "rollbackRelease": "/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9"
   }
 }

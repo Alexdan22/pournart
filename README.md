@@ -6,7 +6,7 @@ Full-stack ecommerce site for Pour n Art, a premium handmade resin art store.
 
 - Next.js 16 App Router
 - TypeScript
-- Prisma + SQLite for local development
+- Prisma + SQLite locally and on the current production VPS
 - Custom cookie session auth
 - Razorpay Orders/Checkout verification routes
 - Resend-backed role-based email notification layer
@@ -62,4 +62,6 @@ The disabled-by-default, admin-only Aurora Live Pilot deployment and rollback pr
 
 ## Deployment Direction
 
-Cheapest scalable path: Vercel for the app plus a managed Postgres provider such as Neon/Supabase. The current local SQLite setup is for development; before production, switch Prisma datasource to Postgres and run a production migration.
+Production currently runs on the Pour n Art VPS as one PM2 `fork` process with the shared SQLite database at `/home/alex/pour-n-art/shared/pour-n-art.db`. Releases use timestamped directories and an atomic `current` symlink. Do not run the seed process in production. Aurora catalog-operations migration, backup, release, activation, and rollback remain separately gated procedures documented in `docs/AURORA_CATALOG_OPERATIONS.md`.
+
+A future move to a managed database or another hosting platform is a separate architecture milestone; it is not a prerequisite or an authorized part of the current VPS rollout.

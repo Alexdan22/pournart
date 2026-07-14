@@ -13,8 +13,9 @@
     "format": "aurora-project",
     "formatVersion": 1,
     "projectId": "project.pna.catalog-intelligence-pilot",
-    "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52",
-    "sha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f"
+    "projectFingerprint": "0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b",
+    "sha256": "952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c",
+    "sourceCommit": "df5d6b3122fedf0890ed75435ad93c7c21eeed73"
   },
   "compatibility": {
     "projectFormat": 1,

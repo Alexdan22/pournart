@@ -22,7 +22,7 @@ assert(loaded.runtime.projectId === manifest.bundle.projectId, "Project ID misma
 const productArtifacts = (JSON.parse(bundleText).artifacts as { reference: { kind: string; artifactId: string } }[])
   .filter((artifact) => artifact.reference.kind === "product-dna")
   .map((artifact) => artifact.reference.artifactId);
-assert(productArtifacts.length === 8, "Expected eight ProductDNA artifacts.");
+assert(productArtifacts.length === 12, "Expected twelve ProductDNA artifacts.");
 
 for (const artifactId of productArtifacts) {
   const result = loaded.runtime.execute({

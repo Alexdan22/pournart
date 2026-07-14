@@ -2,7 +2,7 @@
 
 ## Local-only implementation boundary
 
-Sprints 56-59 are implemented and validated sequentially on the local milestone branch. Sprint 60 remains behind the approved ProductDNA checkpoint. No command in this document authorizes a production backup, migration, environment change, PM2 action, or deployment. Those actions require the separate external-action approval.
+Sprints 56-60 are implemented and validated sequentially on the local milestone branches. The Sprint 60 ProductDNA checkpoint was approved before the four new artifacts were created. No command in this document authorizes a production backup, migration, environment change, PM2 action, bundle replacement, or deployment. Those actions require the separate external-action approval.
 
 ## SQLite assumptions
 
@@ -41,7 +41,9 @@ The production-copy rehearsal and production migration remain external actions.
 
 ## Growth policy
 
-Evaluation and review history is retained indefinitely. Review growth before the SQLite database reaches 500 MiB or grows by 100 MiB in one month. No automated deletion is authorized. The completion report will use measured stored-result sizes from the twelve-product validation rather than a speculative per-row estimate.
+Evaluation and review history is retained indefinitely. Review growth before the SQLite database reaches 500 MiB or grows by 100 MiB in one month. No automated deletion is authorized.
+
+The twelve-product local validation produced 395,905 bytes of exact successful-result JSON: 32,992 bytes average, 26,609 bytes minimum, and 38,377 bytes maximum. One complete twelve-product evaluation generation therefore contributes about 0.38 MiB of result JSON before row, index, input-snapshot, and review overhead. At one full generation per week, raw result JSON is approximately 19.6 MiB per year; operational capacity planning should allow roughly 25–40 MiB per year after SQLite and metadata overhead, then replace that estimate with observed monthly growth.
 
 ## Binding manifest and Studio handoff
 
@@ -74,3 +76,24 @@ Product name, price, compare-at price, featured state, low-stock threshold, `upd
 `REUSE_CURRENT` follows process cache, then database, then Aurora runtime. `REEVALUATE` bypasses reuse and creates a new immutable attempt. `RETRY` executes only when a failed attempt exists for the exact current context; otherwise it reuses an exact current success when available. A failed refresh removes the process-cache acceleration entry so database reads expose both the retained valid success and the newer safe failure codes. Operational logs record only lookup source, hit/miss/bypass, duration, safe issue codes, and permitted IDs.
 
 The process cache is capped at 200 successful results and is acceleration only. A change from the verified single PM2 process is a deployment stop condition because process-local single-flight is not cross-process coordination.
+
+## Twelve-product release candidate
+
+- Aurora source commit: `df5d6b3122fedf0890ed75435ad93c7c21eeed73`.
+- Pour n Art parent commit: `e877ddf2725e99df3c7bd73897221ff5395c2596`; the completion report records the resulting rollout commit.
+- Project ID: `project.pna.catalog-intelligence-pilot`; bundle format remains `aurora-project` v1.
+- Bundle SHA-256: `952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c`.
+- Project fingerprint: `0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b`.
+- Binding manifest fingerprint: `03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499`.
+- Twelve active exact-slug bindings; no awaiting-review binding and no expected database ID is configured.
+- The unchanged unpublished SDK remains `@aurora/sdk@1.0.0-pilot.1` from source commit `c69147e88a43dda5a475f22e6233a7df65299614`.
+
+The bundle and binding manifest are one atomic release pair. Deploying this pair intentionally makes every prior evaluation stale through the bundle, artifact, and manifest fingerprints. It does not automatically execute Aurora or modify product records.
+
+The previous eight-product pair remains in the currently deployed release `/home/alex/pour-n-art/releases/20260713-071442-aurora-8b208c9` with bundle SHA-256 `0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f` and project fingerprint `152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52`. Bundle rollback switches the whole application release; never mix the old bundle with the new binding manifest or deployment checksum.
+
+## Externally gated migration and rollout
+
+After separate approval: record PM2 shape and unrelated PIDs; take and verify an online database backup; rehearse both migrations against a VPS-local restored copy; disable Aurora; stop only `pour-n-art`; take a final quiesced backup; run migration-only `npm run db:deploy`; switch the atomic release; start only `pour-n-art`; and validate storefront, checkout, admin, database integrity, disabled Aurora, and unrelated PIDs before activation. Never run `db:seed`.
+
+Activation then reuses the existing ADMIN allowlist, restarts only `pour-n-art`, verifies health and one canary, verifies persisted canary history after one controlled restart, evaluates the four additions, and begins the approved seven-day observation. Rollback disables Aurora first and returns to the prior application release with additive tables left intact. Database restoration is allowed only before customer traffic resumes or under a separately approved reconciliation plan.

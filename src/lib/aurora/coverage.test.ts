@@ -24,9 +24,9 @@ const deploymentValue = JSON.parse(readFileSync(join(vendor, "deployment-manifes
 
 describe("versioned Aurora binding manifest", () => {
   it("loads the repository pair with separate entry and manifest fingerprints", () => {
-    expect(auroraBindingManifestHealth).toMatchObject({ ok: true, entryCount: 8 });
+    expect(auroraBindingManifestHealth).toMatchObject({ ok: true, entryCount: 12 });
     expect(auroraBindingManifestHealth.manifestFingerprint).toMatch(/^[0-9a-f]{64}$/);
-    expect(new Set(auroraProductBindings.map((entry) => entry.entryFingerprint)).size).toBe(8);
+    expect(new Set(auroraProductBindings.map((entry) => entry.entryFingerprint)).size).toBe(12);
   });
 
   it("rejects duplicate identities, missing artifacts, and incompatible checksums", () => {
@@ -74,7 +74,7 @@ describe("versioned Aurora binding manifest", () => {
       additions: [],
       removals: [],
       changedBindings: [],
-      resultingActiveBindings: 8,
+      resultingActiveBindings: 12,
     });
   });
 });

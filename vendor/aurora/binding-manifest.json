@@ -3,8 +3,8 @@
   "manifestId": "manifest.pna.catalog-intelligence-bindings",
   "projectId": "project.pna.catalog-intelligence-pilot",
   "expectedBundle": {
-    "sha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f",
-    "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52"
+    "sha256": "952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c",
+    "projectFingerprint": "0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b"
   },
   "entries": [
     {
@@ -101,6 +101,54 @@
       "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
       "ruleSetDomainId": "ruleset.pna.catalog-readiness",
       "approvedExplicitFacts": ["pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.festive-resin-table-accent",
+      "expectedSlug": "festive-resin-table-accent",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.festive-resin-table-accent",
+      "productDnaProductId": "product.pna.festive-resin-table-accent",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.care-guidance.required", "pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.gold-leaf-studio-plate",
+      "expectedSlug": "gold-leaf-studio-plate",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.gold-leaf-studio-plate",
+      "productDnaProductId": "product.pna.gold-leaf-studio-plate",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.premium-presentation.approved", "pilot.care-guidance.required", "pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.ocean-vanity-tray",
+      "expectedSlug": "ocean-vanity-tray",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.ocean-vanity-tray",
+      "productDnaProductId": "product.pna.ocean-vanity-tray",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.premium-presentation.approved", "pilot.care-guidance.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.sea-glass-accent-coasters",
+      "expectedSlug": "sea-glass-accent-coasters",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.sea-glass-accent-coasters",
+      "productDnaProductId": "product.pna.sea-glass-accent-coasters",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.care-guidance.required"],
       "expectedDatabaseIds": {}
     }
   ]

@@ -15,6 +15,18 @@
 
 The VPS is the active pilot environment. Deployment and rollback use the timestamped release directories, the atomic `current` symlink, and the single PM2 process named `pour-n-art`.
 
+## Catalog-operations candidate — not deployed
+
+The local `codex/aurora-catalog-operations` branch contains a twelve-product replacement pair. It is not active on the VPS and must not be copied into the current release independently.
+
+- Aurora commit: `df5d6b3122fedf0890ed75435ad93c7c21eeed73`.
+- Bundle SHA-256: `952c282b07fa272f3e86b2dea50bd8b66e9efd3cee558b42076638fa5ee5df7c`.
+- Project fingerprint: `0f724ca61d7ea9ba5599d54b0b6a8f508082bf6c5beff6b66095f964e930ff2b`.
+- Binding manifest fingerprint: `03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499`.
+- Database changes: two additive migrations, still unapplied in production.
+
+The active release and all activation evidence below continue to describe the existing eight-product pilot. The candidate’s migration, backup, release, restart, activation, and evaluation steps remain behind the external-action gate in `AURORA_CATALOG_OPERATIONS.md`.
+
 ## Runtime and access controls
 
 - SDK: unpublished `@aurora/sdk@1.0.0-pilot.1`, committed as a checksummed tarball.
