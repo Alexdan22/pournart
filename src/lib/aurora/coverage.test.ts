@@ -25,8 +25,26 @@ const deploymentValue = JSON.parse(readFileSync(join(vendor, "deployment-manifes
 describe("versioned Aurora binding manifest", () => {
   it("loads the repository pair with separate entry and manifest fingerprints", () => {
     expect(auroraBindingManifestHealth).toMatchObject({ ok: true, entryCount: 12 });
-    expect(auroraBindingManifestHealth.manifestFingerprint).toMatch(/^[0-9a-f]{64}$/);
+    expect(auroraBindingManifestHealth.manifestFingerprint).toBe(
+      "03d4abd6c14b3c8a14cc2265027e893d0de81c824be62b00b3d6dad675a45499",
+    );
     expect(new Set(auroraProductBindings.map((entry) => entry.entryFingerprint)).size).toBe(12);
+  });
+
+  it("canonicalizes equivalent manifests and changes identity when authoritative content changes", () => {
+    const original = validateBindingManifest(manifestValue, bundleValue, deploymentValue);
+    const equivalent = validateBindingManifest(
+      reverseObjectKeys(manifestValue),
+      bundleValue,
+      deploymentValue,
+    );
+    const changed = structuredClone(manifestValue);
+    changed.entries[0]!.expectedDatabaseIds = { production: "product.expected" };
+    const changedResult = validateBindingManifest(changed, bundleValue, deploymentValue);
+
+    expect(equivalent.health.manifestFingerprint).toBe(original.health.manifestFingerprint);
+    expect(changedResult.health.ok).toBe(true);
+    expect(changedResult.health.manifestFingerprint).not.toBe(original.health.manifestFingerprint);
   });
 
   it("rejects duplicate identities, missing artifacts, and incompatible checksums", () => {
@@ -78,6 +96,16 @@ describe("versioned Aurora binding manifest", () => {
     });
   });
 });
+
+function reverseObjectKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(reverseObjectKeys);
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .reverse()
+      .map(([key, item]) => [key, reverseObjectKeys(item)]),
+  );
+}
 
 describe("catalog coverage", () => {
   it("reports active/not-evaluated coverage and exact readiness blockers", () => {

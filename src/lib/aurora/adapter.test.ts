@@ -138,10 +138,10 @@ describe("Aurora pilot authorization", () => {
 
   it("requires enabled feature, authenticated admin, and allowlist membership", () => {
     const allowlist = parseAuroraAllowlist("OWNER@EXAMPLE.COM, admin-2");
-    expect(evaluateAuroraAccess({ enabled: false, allowlist, session: admin })).toMatchObject({ code: "DISABLED" });
-    expect(evaluateAuroraAccess({ enabled: true, allowlist, session: null })).toMatchObject({ code: "UNAUTHENTICATED" });
-    expect(evaluateAuroraAccess({ enabled: true, allowlist, session: { ...admin, role: "CUSTOMER" } })).toMatchObject({ code: "NOT_ADMIN" });
-    expect(evaluateAuroraAccess({ enabled: true, allowlist: new Set(), session: admin })).toMatchObject({ code: "NOT_ALLOWLISTED" });
+    expect(evaluateAuroraAccess({ enabled: false, allowlist, session: admin })).toEqual({ ok: false, status: 404, code: "DISABLED" });
+    expect(evaluateAuroraAccess({ enabled: true, allowlist, session: null })).toEqual({ ok: false, status: 401, code: "UNAUTHENTICATED" });
+    expect(evaluateAuroraAccess({ enabled: true, allowlist, session: { ...admin, role: "CUSTOMER" } })).toEqual({ ok: false, status: 403, code: "NOT_ADMIN" });
+    expect(evaluateAuroraAccess({ enabled: true, allowlist: new Set(), session: admin })).toEqual({ ok: false, status: 403, code: "NOT_ALLOWLISTED" });
     expect(evaluateAuroraAccess({ enabled: true, allowlist, session: admin })).toEqual({ ok: true });
   });
 });
