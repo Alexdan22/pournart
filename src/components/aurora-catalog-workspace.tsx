@@ -4,19 +4,43 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { Play, Search, Sparkles } from "lucide-react";
 import type { AuroraEvaluationView, AuroraCatalogState } from "@/lib/aurora/types";
+import type {
+  BindingCoverageState,
+  CoverageReadinessReason,
+  EvaluationCoverageState,
+  ReviewCoverageState,
+} from "@/lib/aurora/coverage";
 
 export type AuroraCatalogItem = Readonly<{
   id: string;
   name: string;
   slug: string;
-  bound: boolean;
-  productDnaPresent: boolean;
+  binding: BindingCoverageState;
+  evaluation: EvaluationCoverageState;
+  review: ReviewCoverageState | null;
   ready: boolean;
-  blockers: readonly string[];
+  readinessReasons: readonly CoverageReadinessReason[];
+  bindingId?: string;
+  bindingFingerprint?: string;
+  manifestFingerprint: string;
+  productDnaArtifactId?: string;
+  ruleSetArtifactId?: string;
   state: AuroraCatalogState;
 }>;
 
-const filters = ["all", "bound", "unbound", "ready", "blocking", "needs-review", "success", "invalid"] as const;
+const filters = [
+  "all",
+  "binding-active",
+  "binding-unbound",
+  "binding-awaiting-review",
+  "binding-stale",
+  "binding-invalid",
+  "evaluation-current",
+  "evaluation-stale",
+  "evaluation-failed",
+  "ready",
+  "blocking",
+] as const;
 
 export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonly AuroraCatalogItem[] }) {
   const [items, setItems] = useState(initialItems);
@@ -31,10 +55,10 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
         const matchesQuery = `${item.name} ${item.slug}`.toLowerCase().includes(query.trim().toLowerCase());
         const matchesFilter =
           filter === "all" ||
-          (filter === "bound" && item.bound) ||
-          (filter === "unbound" && !item.bound) ||
+          (filter.startsWith("binding-") && item.binding === filter.slice("binding-".length)) ||
+          (filter.startsWith("evaluation-") && item.evaluation === filter.slice("evaluation-".length)) ||
           (filter === "ready" && item.ready) ||
-          item.state === filter;
+          (filter === "blocking" && !item.ready);
         return matchesQuery && matchesFilter;
       }),
     [items, query, filter],
@@ -71,8 +95,18 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
         collected = ids.map((productId) => clientFailure(productId));
       }
       setProgress({ complete: ids.length, total: ids.length });
-      const byId = new Map(collected.map((result) => [result.productId, stateFor(result)]));
-      setItems((current) => current.map((item) => (byId.has(item.id) ? { ...item, state: byId.get(item.id)! } : item)));
+      const byId = new Map(collected.map((result) => [result.productId, result]));
+      setItems((current) => current.map((item) => {
+        const result = byId.get(item.id);
+        return result
+          ? {
+              ...item,
+              state: stateFor(result),
+              evaluation: result.state === "success" ? "current" : "failed",
+              review: result.state === "success" ? "new" : item.review,
+            }
+          : item;
+      }));
     });
   }
 
@@ -92,16 +126,17 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
       </p>
       <div className="admin-table-wrap">
         <table className="admin-table">
-          <thead><tr><th>Select</th><th>Product</th><th>Binding</th><th>ProductDNA</th><th>Readiness</th><th>Aurora state</th><th>Open</th></tr></thead>
+          <thead><tr><th>Select</th><th>Product</th><th>Binding</th><th>ProductDNA</th><th>Evaluation</th><th>Review</th><th>Readiness</th><th>Open</th></tr></thead>
           <tbody>
             {visible.map((item) => (
               <tr key={item.id}>
                 <td><input type="checkbox" checked={selected.has(item.id)} onChange={() => toggle(item.id)} disabled={!selected.has(item.id) && selected.size >= 25} aria-label={`Select ${item.name}`} /></td>
                 <td><strong>{item.name}</strong><small>{item.slug}</small></td>
-                <td><Status value={item.bound ? "Bound" : "Unbound"} good={item.bound} /></td>
-                <td><Status value={item.productDnaPresent ? "Present" : "Missing"} good={item.productDnaPresent} /></td>
-                <td>{item.ready ? "Ready" : item.blockers.join(", ") || "Not ready"}</td>
-                <td><span className={`aurora-state ${item.state}`}>{label(item.state)}</span></td>
+                <td><span className={`aurora-state ${item.binding === "active" ? "success" : "invalid"}`}>{label(item.binding)}</span><small>{item.bindingId ?? "No binding ID"}</small></td>
+                <td><Status value={item.productDnaArtifactId ? "Present" : "Missing"} good={Boolean(item.productDnaArtifactId)} /></td>
+                <td><span className={`aurora-state ${item.evaluation === "current" ? "success" : item.evaluation}`}>{label(item.evaluation)}</span></td>
+                <td>{item.review ? label(item.review) : "Not evaluated"}</td>
+                <td>{item.ready ? "Ready" : item.readinessReasons.map((reason) => reason.label).join(", ") || "Not ready"}</td>
                 <td><Link className="icon-action" href={`/admin/products/${item.id}/intelligence`} aria-label={`Open Intelligence for ${item.name}`}><Sparkles aria-hidden size={15} /></Link></td>
               </tr>
             ))}

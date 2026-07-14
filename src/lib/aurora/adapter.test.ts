@@ -27,8 +27,8 @@ describe("Aurora product bindings", () => {
   });
 
   it("blocks an optional environment-specific expected ID mismatch", () => {
-    const configured = { ...auroraProductBindings[0]!, expectedProductId: "db.expected" };
-    expect(validateAuroraBinding(configured, { id: "db.other", slug: configured.expectedSlug })).toMatchObject({
+    const configured = { ...auroraProductBindings[0]!, expectedDatabaseIds: { test: "db.expected" } };
+    expect(validateAuroraBinding(configured, { id: "db.other", slug: configured.expectedSlug }, "test")).toMatchObject({
       ok: false,
       state: "stale-binding",
     });

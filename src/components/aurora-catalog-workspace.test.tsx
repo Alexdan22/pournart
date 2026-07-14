@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { AuroraCatalogWorkspace } from "./aurora-catalog-workspace";
 
 const items = [
-  { id: "one", name: "Bound product", slug: "bound-product", bound: true, productDnaPresent: true, ready: true, blockers: [], state: "not-evaluated" as const },
-  { id: "two", name: "Unbound product", slug: "unbound-product", bound: false, productDnaPresent: false, ready: false, blockers: ["No binding"], state: "unbound" as const },
+  { id: "one", name: "Bound product", slug: "bound-product", binding: "active" as const, evaluation: "not-evaluated" as const, review: null, ready: true, readinessReasons: [], bindingId: "binding.one", manifestFingerprint: "manifest", productDnaArtifactId: "artifact.one", ruleSetArtifactId: "rules.one", state: "not-evaluated" as const },
+  { id: "two", name: "Unbound product", slug: "unbound-product", binding: "unbound" as const, evaluation: "not-evaluated" as const, review: null, ready: false, readinessReasons: [{ code: "BINDING_NOT_FOUND", label: "No exact-slug binding" }], manifestFingerprint: "manifest", state: "unbound" as const },
 ];
 
 describe("Aurora catalog workspace", () => {
@@ -14,7 +14,7 @@ describe("Aurora catalog workspace", () => {
     const user = userEvent.setup();
     render(<AuroraCatalogWorkspace initialItems={items} />);
     expect(screen.getByText("Bound product")).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText("Aurora state filter"), "unbound");
+    await user.selectOptions(screen.getByLabelText("Aurora state filter"), "binding-unbound");
     expect(screen.queryByText("Bound product")).not.toBeInTheDocument();
     expect(screen.getByText("Unbound product")).toBeInTheDocument();
     await user.click(screen.getByLabelText("Select Unbound product"));

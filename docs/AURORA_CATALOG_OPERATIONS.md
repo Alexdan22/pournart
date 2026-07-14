@@ -2,7 +2,7 @@
 
 ## Local-only implementation boundary
 
-Sprints 56-60 are implemented and validated locally. No command in this document authorizes a production backup, migration, environment change, PM2 action, or deployment. Those actions require the separate external-action approval.
+Sprints 56-60 are implemented and validated sequentially on the local milestone branches. No command in this document authorizes a production backup, migration, environment change, PM2 action, or deployment. Those actions require the separate external-action approval.
 
 ## SQLite assumptions
 
@@ -42,3 +42,17 @@ The production-copy rehearsal and production migration remain external actions.
 ## Growth policy
 
 Evaluation and review history is retained indefinitely. Review growth before the SQLite database reaches 500 MiB or grows by 100 MiB in one month. No automated deletion is authorized. The completion report will use measured stored-result sizes from the twelve-product validation rather than a speculative per-row estimate.
+
+## Binding manifest and Studio handoff
+
+`vendor/aurora/binding-manifest.json` is the repository authority. Runtime editing is not supported. Every entry uses an exact expected slug and keeps the database ID, binding ID, ProductDNA artifact ID, ProductDNA product ID, and RuleSet IDs separate. Optional environment-specific database IDs are keyed by `AURORA_PILOT_ENVIRONMENT`; a configured mismatch blocks execution. An absent key does not make a database ID authoritative.
+
+Aurora Studio authors provide a candidate `aurora-project` v1 bundle and the reviewed identity list. Pour n Art maintainers prepare the matching candidate binding manifest and run:
+
+```powershell
+npm run aurora:preview -- --manifest <candidate-binding-manifest.json> --bundle <candidate-aurora-project.json>
+```
+
+The read-only preview reports additions, removals, changed bindings, duplicate identities, missing ProductDNA or RuleSet artifacts, checksum/fingerprint incompatibility, and resulting active/awaiting-review totals. It never writes the repository, database, or runtime configuration.
+
+Activation requires one reviewed release commit containing both files and their updated deployment checksums. The previous bundle and manifest are retained together in the previous application release. Rollback switches the application release pair together; mixing either file across releases is prohibited.

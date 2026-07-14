@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "manifest.pna.catalog-intelligence-bindings",
+  "projectId": "project.pna.catalog-intelligence-pilot",
+  "expectedBundle": {
+    "sha256": "0a3c80b5968b223309a249e7e91c1ee33a865c14c74e66d3fdd260f5bb873f5f",
+    "projectFingerprint": "152fffc7eabc54be771497037c815f6be5ab9c239acfcf65aef79c8c16f70d52"
+  },
+  "entries": [
+    {
+      "state": "active",
+      "bindingId": "binding.pna.ocean-bloom-coaster-set",
+      "expectedSlug": "ocean-bloom-coaster-set",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.ocean-bloom-coaster-set",
+      "productDnaProductId": "product.pna.ocean-bloom-coaster-set",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.care-guidance.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.floral-ocean-name-plate",
+      "expectedSlug": "floral-ocean-name-plate",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.floral-ocean-name-plate",
+      "productDnaProductId": "product.pna.floral-ocean-name-plate",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.premium-presentation.approved", "pilot.care-guidance.required", "pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.blush-petal-resin-tray",
+      "expectedSlug": "blush-petal-resin-tray",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.blush-petal-resin-tray",
+      "productDnaProductId": "product.pna.blush-petal-resin-tray",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.premium-presentation.approved", "pilot.care-guidance.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.golden-aura-devotional-keepsake",
+      "expectedSlug": "golden-aura-devotional-keepsake",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.golden-aura-devotional-keepsake",
+      "productDnaProductId": "product.pna.golden-aura-devotional-keepsake",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.care-guidance.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.memory-resin-frame",
+      "expectedSlug": "memory-resin-frame",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.memory-resin-frame",
+      "productDnaProductId": "product.pna.memory-resin-frame",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.premium-presentation.approved", "pilot.care-guidance.required", "pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.initial-charm-keychain-pair",
+      "expectedSlug": "initial-charm-keychain-pair",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.initial-charm-keychain-pair",
+      "productDnaProductId": "product.pna.initial-charm-keychain-pair",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": [],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.custom-wedding-ring-platter",
+      "expectedSlug": "custom-wedding-ring-platter",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.custom-wedding-ring-platter",
+      "productDnaProductId": "product.pna.custom-wedding-ring-platter",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.premium-presentation.approved", "pilot.care-guidance.required", "pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    },
+    {
+      "state": "active",
+      "bindingId": "binding.pna.collaboration-custom-order",
+      "expectedSlug": "collaboration-custom-order",
+      "projectId": "project.pna.catalog-intelligence-pilot",
+      "productDnaArtifactId": "artifact.pna.product.collaboration-custom-order",
+      "productDnaProductId": "product.pna.collaboration-custom-order",
+      "ruleSetArtifactId": "artifact.pna.ruleset.catalog-readiness",
+      "ruleSetDomainId": "ruleset.pna.catalog-readiness",
+      "approvedExplicitFacts": ["pilot.admin-review.required"],
+      "expectedDatabaseIds": {}
+    }
+  ]
+}

@@ -176,15 +176,17 @@ function successView(): AuroraEvaluationView {
     slug: "product-one",
     productName: "Product one",
     binding: {
+      state: "active",
       bindingId: "binding.pna.ocean-bloom-coaster-set",
       expectedSlug: "ocean-bloom-coaster-set",
+      expectedDatabaseIds: {},
       projectId: "project.pna.catalog-intelligence-pilot",
-      projectArtifactId: "artifact.pna.product.ocean-bloom-coaster-set",
       productDnaArtifactId: "artifact.pna.product.ocean-bloom-coaster-set",
       productDnaProductId: "product.pna.ocean-bloom-coaster-set",
       ruleSetArtifactId: "artifact.pna.ruleset.catalog-readiness",
       ruleSetDomainId: "ruleset.pna.catalog-readiness",
       approvedExplicitFacts: [],
+      entryFingerprint: "binding-fingerprint",
     },
     response: { ok: true, domain: {}, trace: {} },
     health: {

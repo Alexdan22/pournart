@@ -18,7 +18,8 @@
     "email:preview": "tsx scripts/email-preview.ts",
     "email:test": "node scripts/test-email.js",
     "aurora:validate": "tsx scripts/aurora-validate.mts",
-    "aurora:rehearse": "node --conditions=react-server --conditions=import --import tsx scripts/aurora-persistence-rehearsal.mts"
+    "aurora:rehearse": "node --conditions=react-server --conditions=import --import tsx scripts/aurora-persistence-rehearsal.mts",
+    "aurora:preview": "node --conditions=import --import tsx scripts/aurora-preview-pair.mts"
   },
   "dependencies": {
     "@aurora/sdk": "file:vendor/aurora/aurora-sdk-1.0.0-pilot.1.tgz",

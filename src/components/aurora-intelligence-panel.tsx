@@ -34,7 +34,17 @@ export function AuroraIntelligencePanel({ productId, initialState }: { productId
     });
   }
 
-  const canEvaluate = !["no-binding", "stale-binding", "missing-product", "authorization-failure", "unsupported-product"].includes(state.state);
+  const canEvaluate = ![
+    "no-binding",
+    "awaiting-review",
+    "stale-binding",
+    "invalid-binding",
+    "missing-product-dna",
+    "missing-ruleset",
+    "missing-product",
+    "authorization-failure",
+    "unsupported-product",
+  ].includes(state.state);
 
   return (
     <section className="admin-panel aurora-panel" aria-labelledby="aurora-intelligence-title" aria-busy={pending}>
@@ -63,7 +73,11 @@ function PanelContent({ state }: { state: PanelState }) {
   const messages: Record<Exclude<PanelState["state"], "success">, { title: string; tone: MessageTone }> = {
     "not-evaluated": { title: "Ready to evaluate", tone: "neutral" },
     "no-binding": { title: "No ProductDNA binding", tone: "neutral" },
+    "awaiting-review": { title: "Binding awaits review", tone: "neutral" },
     "stale-binding": { title: "Binding is stale", tone: "warning" },
+    "invalid-binding": { title: "Binding manifest is invalid", tone: "warning" },
+    "missing-product-dna": { title: "ProductDNA is missing", tone: "warning" },
+    "missing-ruleset": { title: "RuleSet is missing", tone: "warning" },
     "missing-product": { title: "Product is missing", tone: "warning" },
     "unsupported-product": { title: "Intelligence is not supplied", tone: "neutral" },
     "validation-failure": { title: "Intelligence validation failed", tone: "warning" },
@@ -101,6 +115,7 @@ function SuccessView({ value }: { value: Extract<AuroraEvaluationView, { state: 
         <summary><ChevronRight aria-hidden size={15} /> Advanced details</summary>
         <dl>
           <Detail label="Binding" value={value.binding.bindingId} />
+          <Detail label="Binding fingerprint" value={value.binding.entryFingerprint} />
           <Detail label="ProductDNA" value={value.binding.productDnaProductId} />
           <Detail label="Product artifact" value={value.binding.productDnaArtifactId} />
           <Detail label="RuleSet" value={value.binding.ruleSetDomainId} />

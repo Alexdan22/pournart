@@ -2,8 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AuroraProductBinding } from "./bindings";
-import { auroraProductBindings } from "./bindings";
+import { auroraBindingManifestFingerprint } from "./bindings";
 import type { AuroraCatalogProduct } from "./types";
+import { sha256, stableJson } from "./canonical-json";
+
+export { sha256, stableJson } from "./canonical-json";
 
 const deployment = JSON.parse(
   readFileSync(join(process.cwd(), "vendor", "aurora", "deployment-manifest.json"), "utf8"),
@@ -84,8 +87,8 @@ export function buildEvaluationContextIdentity(
     approvedExplicitFacts: [...binding.approvedExplicitFacts].sort(),
   };
   const inputSnapshotJson = stableJson(inputSnapshot);
-  const bindingFingerprint = sha256(stableJson(binding));
-  const bindingManifestFingerprint = sha256(stableJson(auroraProductBindings));
+  const bindingFingerprint = binding.entryFingerprint;
+  const bindingManifestFingerprint = auroraBindingManifestFingerprint;
   const runtimeContractsJson = stableJson(deployment.compatibility);
   const applicationContextFingerprint = sha256(
     stableJson({
@@ -113,15 +116,7 @@ export function serializeRequestIdentity(identity: EvaluationRequestIdentity) {
   return Object.freeze({ json, fingerprint: sha256(json) });
 }
 
-export function stableJson(value: unknown): string {
-  return serializeStable(normalize(value, "$"));
-}
-
-export function sha256(value: string | Buffer) {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function inspectCustomizationSchema(value: string) {
+export function inspectCustomizationSchema(value: string) {
   try {
     const parsed = JSON.parse(value) as unknown;
     const valid =
@@ -146,35 +141,6 @@ function uuidV5(name: string, namespace: string) {
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = bytes.toString("hex");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
-type StableValue = null | string | number | boolean | StableValue[] | { [key: string]: StableValue };
-
-function normalize(value: unknown, path: string): StableValue {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error(`Non-finite value at ${path}.`);
-    return value;
-  }
-  if (Array.isArray(value)) return value.map((item, index) => normalize(item, `${path}[${index}]`));
-  if (isRecord(value)) {
-    const result: Record<string, StableValue> = {};
-    for (const key of Object.keys(value).sort()) {
-      const item = value[key];
-      if (item === undefined) continue;
-      result[key] = normalize(item, `${path}.${key}`);
-    }
-    return result;
-  }
-  throw new Error(`Non-JSON value at ${path}.`);
-}
-
-function serializeStable(value: StableValue): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(serializeStable).join(",")}]`;
-  return `{${Object.entries(value)
-    .map(([key, item]) => `${JSON.stringify(key)}:${serializeStable(item)}`)
-    .join(",")}}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
