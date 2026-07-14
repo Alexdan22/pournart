@@ -20,7 +20,7 @@ try {
     stdio: "pipe",
   });
 
-  const [{ PrismaClient }, adapter, database, applicationDatabase, persistence, identity, bindings, review] = await Promise.all([
+  const [{ PrismaClient }, adapter, database, applicationDatabase, persistence, identity, bindings, review, batch] = await Promise.all([
     import("@prisma/client"),
     import("../src/lib/aurora/adapter"),
     import("../src/lib/aurora/database"),
@@ -29,6 +29,7 @@ try {
     import("../src/lib/aurora/identity"),
     import("../src/lib/aurora/bindings"),
     import("../src/lib/aurora/review"),
+    import("../src/lib/aurora/batch"),
   ]);
   const client = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   const legacyUpgrade = await rehearseLegacyUpgrade(PrismaClient, directory, python);
@@ -95,6 +96,26 @@ try {
     requestMode: "REEVALUATE",
   });
   assert(first.state === "success" && first.evaluationId, "First evaluation did not persist.");
+  const processHit = await adapter.evaluateProductIntelligence(productId, {
+    requestedById: adminId,
+    requestKey: randomUUID(),
+    requestMode: "REUSE_CURRENT",
+  });
+  assert(
+    processHit.state === "success" && processHit.lookupSource === "process-cache",
+    "REUSE_CURRENT did not use the process cache first.",
+  );
+  adapter.clearLatestProductIntelligence();
+  const databaseHit = await adapter.evaluateProductIntelligence(productId, {
+    requestedById: adminId,
+    requestKey: randomUUID(),
+    requestMode: "REUSE_CURRENT",
+  });
+  assert(
+    databaseHit.state === "success" && databaseHit.lookupSource === "database",
+    "REUSE_CURRENT did not use durable persistence after cache reset.",
+  );
+  assert((await client.auroraEvaluation.count()) === 1, "Cache or persistence reuse created an execution row.");
   const reviewRequestKey = randomUUID();
   const reviewNote = "Rehearsal review requires a structured catalog correction.";
   const firstReview = await review.transitionAuroraReview({
@@ -262,6 +283,22 @@ try {
   await shortLock.done;
   assert(recovered.status === "SUCCEEDED", "A short SQLite lock did not recover.");
 
+  const serializedBatch = await batch.mapWithConcurrency(
+    Array.from({ length: 4 }, () => randomUUID()),
+    4,
+    (key) => persistence.persistEvaluation(buildPersistenceInput(key)),
+  );
+  assert(
+    serializedBatch.length === 4 && serializedBatch.every((item) => item.status === "SUCCEEDED"),
+    "Batch concurrency four did not persist through the serialized Aurora write queue.",
+  );
+
+  const [unrelatedWrite, isolatedAuroraWrite] = await Promise.all([
+    client.product.update({ where: { id: productId }, data: { isFeatured: true } }),
+    persistence.persistEvaluation(buildPersistenceInput(randomUUID())),
+  ]);
+  assert(unrelatedWrite.isFeatured && isolatedAuroraWrite.status === "SUCCEEDED", "An unrelated database write was not isolated from Aurora persistence.");
+
   const longLock = holdExclusiveLock(databasePath, 5_000);
   await longLock.ready;
   const busyStartedAt = performance.now();
@@ -334,13 +371,17 @@ try {
   adapter.clearLatestProductIntelligence();
   const afterRestart = await adapter.getLatestProductIntelligence(productId);
   assert(afterRestart?.state === "success", "Database-backed latest result did not survive cache reset.");
-  assert((await client.auroraEvaluation.count()) === 5, "Unexpected evaluation row count.");
+  assert(
+    afterRestart.lifecycle?.latestRefreshFailure?.issueCodes.includes("REHEARSAL_SAFE_FAILURE"),
+    "A later failed refresh was not reported alongside the retained valid success.",
+  );
+  assert((await client.auroraEvaluation.count()) === 10, "Unexpected evaluation row count.");
   const latestFailure = await client.auroraEvaluation.findUniqueOrThrow({ where: { requestKey: failedKey } });
   assert(latestFailure.status === "FAILED" && latestFailure.resultJson === null, "Failure attempt was not safely stored.");
 
   await client.product.delete({ where: { id: productId } });
   const historical = await client.auroraEvaluation.findMany({ where: { productIdAtExecution: productId } });
-  assert(historical.length === 5 && historical.every((item) => item.productId === null), "Deletion history was not retained.");
+  assert(historical.length === 10 && historical.every((item) => item.productId === null), "Deletion history was not retained.");
   assert((await client.auroraEvaluationReview.count()) === 2, "Review records were not retained.");
   assert((await client.auroraReviewEvent.count()) === 3, "Review event history was not append-only.");
 
@@ -383,11 +424,14 @@ try {
       evaluations: historical.length,
       idempotencyConflict: true,
       concurrentDuplicate: true,
+      batchConcurrencyFourSerializedWrites: true,
+      unrelatedDatabaseWriteIsolation: true,
       failureAttempt: true,
       sqliteShortLockRecovery: true,
       sqliteBusyCode: busyCode,
       sqliteBusyDurationMs: Math.round(busyDurationMs),
       cacheResetPersistence: true,
+      lookupOrder: ["process-cache", "database", "runtime"],
       productDeletionHistory: true,
       backupRestore: true,
       reviewWorkflow: { reviews: 2, events: 3, noCarryForward: true, notesOutsideAuroraJson: true },

@@ -1,6 +1,7 @@
 import type { RuntimeExplicitReference } from "@aurora/sdk";
 import type { AuroraProductBinding } from "./bindings";
 import type { AuroraCatalogProduct } from "./types";
+import { buildEvaluationContextIdentity } from "./identity";
 
 type CatalogCheck = Readonly<{ complete: boolean; leadTimeValid: boolean; customizationSchemaValid: boolean }>;
 
@@ -30,6 +31,7 @@ export function buildAuroraExplicitReferences(
   binding: AuroraProductBinding,
 ): readonly RuntimeExplicitReference[] {
   const check = inspectCatalogProduct(product);
+  const relevantInputFingerprint = buildEvaluationContextIdentity(product, binding).relevantInputFingerprint;
   const ids: string[] = [];
   if (product.adminStatus === "PUBLISHED") ids.push("catalog.product.published");
   if (product.isActive && product.archivedAt === null) ids.push("catalog.product.active");
@@ -43,7 +45,7 @@ export function buildAuroraExplicitReferences(
     id,
     sourceKind: "pour-n-art-product",
     sourceId: product.id,
-    sourceVersion: product.updatedAt.toISOString(),
+    sourceVersion: relevantInputFingerprint,
     fieldPath: catalogFieldPath(id),
     sourceValue: true,
   }));

@@ -30,6 +30,16 @@ export type AuroraInitializationHealth = Readonly<{
   issueCodes: readonly string[];
 }>;
 
+export type AuroraLifecycle = Readonly<{
+  state: "current" | "stale" | "superseded";
+  staleReasons: readonly Readonly<{ code: string; label: string }>[];
+  latestRefreshFailure?: Readonly<{
+    evaluationId: string;
+    evaluatedAt: string;
+    issueCodes: readonly string[];
+  }>;
+}>;
+
 export type AuroraEvaluationView =
   | Readonly<{
       state:
@@ -60,6 +70,8 @@ export type AuroraEvaluationView =
       evaluationId?: string;
       requestKey?: string;
       lookupSource?: "process-cache" | "database" | "runtime";
+      cacheStatus?: "hit" | "miss" | "bypass";
+      lifecycle?: AuroraLifecycle;
     }>;
 
 export type AuroraCatalogState =

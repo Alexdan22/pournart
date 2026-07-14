@@ -12,6 +12,12 @@ const deployment = JSON.parse(
   readFileSync(join(process.cwd(), "vendor", "aurora", "deployment-manifest.json"), "utf8"),
 );
 
+export const auroraDeploymentIdentity = Object.freeze({
+  bundleFingerprint: String(deployment.bundle.projectFingerprint),
+  bundleSha256: String(deployment.bundle.sha256),
+  sdkVersion: String(deployment.sdk.version),
+});
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[45][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const BATCH_ITEM_NAMESPACE = "dd5cfe65-e29d-5aa7-9de4-61e8d39236b8";
 
@@ -20,6 +26,7 @@ export type AuroraOperationType = "PRODUCT_EVALUATION" | "CATALOG_BATCH_ITEM";
 
 export type EvaluationContextIdentity = Readonly<{
   inputSnapshotJson: string;
+  relevantInputFingerprint: string;
   applicationContextFingerprint: string;
   bindingFingerprint: string;
   bindingManifestFingerprint: string;
@@ -87,6 +94,7 @@ export function buildEvaluationContextIdentity(
     approvedExplicitFacts: [...binding.approvedExplicitFacts].sort(),
   };
   const inputSnapshotJson = stableJson(inputSnapshot);
+  const relevantInputFingerprint = sha256(inputSnapshotJson);
   const bindingFingerprint = binding.entryFingerprint;
   const bindingManifestFingerprint = auroraBindingManifestFingerprint;
   const runtimeContractsJson = stableJson(deployment.compatibility);
@@ -104,6 +112,7 @@ export function buildEvaluationContextIdentity(
   );
   return Object.freeze({
     inputSnapshotJson,
+    relevantInputFingerprint,
     applicationContextFingerprint,
     bindingFingerprint,
     bindingManifestFingerprint,

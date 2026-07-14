@@ -34,6 +34,7 @@ const detail: AuroraEvaluationDetail = {
     trigger: "test",
     createdAt: "2026-07-14T00:00:00.000Z",
     result: { ok: true, domain: {}, trace: {} },
+    lifecycle: { state: "current", staleReasons: [] },
   },
   evaluationReview: {
     id: "review.one",

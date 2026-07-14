@@ -38,6 +38,9 @@ describe("Aurora product bindings", () => {
     const product = sampleProduct();
     const binding = auroraProductBindings.find((item) => item.expectedSlug === product.slug)!;
     const references = buildAuroraExplicitReferences(product, binding);
+    const sourceVersion = references.find((item) => item.sourceKind === "pour-n-art-product")?.sourceVersion;
+    expect(sourceVersion).toMatch(/^[a-f0-9]{64}$/);
+    expect(buildAuroraExplicitReferences({ ...product, updatedAt: new Date("2030-01-01") }, binding)[0]?.sourceVersion).toBe(sourceVersion);
     expect(references.map((item) => item.id)).toEqual(
       expect.arrayContaining([
         "catalog.product.published",

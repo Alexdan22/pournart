@@ -54,6 +54,24 @@ export async function findLatestEvaluationAttempt(productId: string) {
   });
 }
 
+export async function findLatestSuccessfulEvaluation(productId: string) {
+  return prisma.auroraEvaluation.findFirst({
+    where: { productIdAtExecution: productId, status: "SUCCEEDED" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+}
+
+export async function findLatestFailedEvaluation(productId: string, applicationContextFingerprint?: string) {
+  return prisma.auroraEvaluation.findFirst({
+    where: {
+      productIdAtExecution: productId,
+      status: "FAILED",
+      ...(applicationContextFingerprint ? { applicationContextFingerprint } : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+  });
+}
+
 export async function validateBatchIdentity(batchRequestKey: string, batchIdentityFingerprint: string) {
   const existing = await prisma.auroraEvaluation.findFirst({
     where: { batchRequestKey },
@@ -147,6 +165,7 @@ export function evaluationFromRecord(
   recordValue: AuroraEvaluation,
   binding: AuroraProductBinding,
   lookupSource: "process-cache" | "database" | "runtime",
+  metadata?: Pick<Extract<AuroraEvaluationView, { state: "success" }>, "cacheStatus" | "lifecycle">,
 ): AuroraEvaluationView {
   if (recordValue.status !== "SUCCEEDED" || !recordValue.resultJson)
     return {
@@ -173,6 +192,7 @@ export function evaluationFromRecord(
       evaluationId: recordValue.id,
       requestKey: recordValue.requestKey,
       lookupSource,
+      ...metadata,
     };
   } catch {
     return {
@@ -196,6 +216,10 @@ export function cacheEvaluation(contextFingerprint: string, value: AuroraEvaluat
     if (oldest) evaluationCache.delete(oldest);
   }
   evaluationCache.set(contextFingerprint, value);
+}
+
+export function invalidateCachedEvaluation(contextFingerprint: string) {
+  evaluationCache.delete(contextFingerprint);
 }
 
 export function clearPersistedEvaluationCache() {

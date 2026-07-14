@@ -2,7 +2,7 @@
 
 ## Local-only implementation boundary
 
-Sprints 56-60 are implemented and validated sequentially on the local milestone branches. No command in this document authorizes a production backup, migration, environment change, PM2 action, or deployment. Those actions require the separate external-action approval.
+Sprints 56-59 are implemented and validated sequentially on the local milestone branch. Sprint 60 remains behind the approved ProductDNA checkpoint. No command in this document authorizes a production backup, migration, environment change, PM2 action, or deployment. Those actions require the separate external-action approval.
 
 ## SQLite assumptions
 
@@ -64,3 +64,13 @@ Evaluation-level review begins as derived `NEW`. Decision-level review is create
 Review notes are limited to 2,000 characters. The server normalizes line endings and rejects prohibited control characters plus obvious email, phone, credential-label, bearer-token, JWT, and API-key patterns. This pattern detection is only a guardrail and cannot guarantee that sensitive data is absent. The UI therefore displays: “Do not enter customer information, passwords, tokens, credentials or secrets.”
 
 Notes are escaped by React and are never logged. They remain outside Aurora result JSON, DTOs, input snapshots, context/artifact fingerprints, cache identities, and operational exports. Only independently authorized ADMIN and allowlisted review routes return review history.
+
+## Evaluation lifecycle and lookup order
+
+Current and stale state is derived at request time from each immutable evaluation snapshot and the current exact product, binding, bundle, SDK, and runtime-contract identities. No stale, current, or superseded flag is stored. The relevant catalog identity includes publication, active/archive state, the inventory zero boundary, exact lead-time values, required-content presence, canonical customization schema, and approved explicit facts.
+
+Product name, price, compare-at price, featured state, low-stock threshold, `updatedAt`, positive inventory changes, nonempty content replacement, category replacement while presence remains satisfied, and customization JSON whitespace or object-key order do not stale an evaluation. Product changes never trigger Aurora automatically.
+
+`REUSE_CURRENT` follows process cache, then database, then Aurora runtime. `REEVALUATE` bypasses reuse and creates a new immutable attempt. `RETRY` executes only when a failed attempt exists for the exact current context; otherwise it reuses an exact current success when available. A failed refresh removes the process-cache acceleration entry so database reads expose both the retained valid success and the newer safe failure codes. Operational logs record only lookup source, hit/miss/bypass, duration, safe issue codes, and permitted IDs.
+
+The process cache is capped at 200 successful results and is acceleration only. A change from the verified single PM2 process is a deployment stop condition because process-local single-flight is not cross-process coordination.

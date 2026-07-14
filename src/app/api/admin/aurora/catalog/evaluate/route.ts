@@ -7,12 +7,14 @@ import {
   createRequestKey,
   fingerprintBatchRequest,
   parseRequestKey,
+  sha256,
   type AuroraRequestMode,
 } from "@/lib/aurora/identity";
 import {
   validateBatchIdentity,
 } from "@/lib/aurora/persistence";
 import { AuroraIdempotencyConflictError, withBatchSingleFlight } from "@/lib/aurora/idempotency";
+import { auroraDeployment } from "@/lib/aurora/runtime";
 
 export async function POST(request: Request) {
   const access = await authorizeAuroraApi();
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
 
   try {
     return await withBatchSingleFlight(batchRequestKey, batchIdentityFingerprint, async () => {
+      const startedAt = performance.now();
       const results = await mapWithConcurrency(parsed.productIds, 4, async (productId, index) => {
         try {
           return await evaluateProductIntelligence(productId, {
@@ -66,6 +69,25 @@ export async function POST(request: Request) {
           };
         }
       });
+      const aggregate = results.reduce(
+        (counts, item) => {
+          counts[item.state === "success" ? "succeeded" : "failed"] += 1;
+          return counts;
+        },
+        { succeeded: 0, failed: 0 },
+      );
+      console.info(JSON.stringify({
+        event: "aurora.catalog-batch",
+        batchRequestKeyHash: sha256(batchRequestKey).slice(0, 12),
+        itemCount: results.length,
+        succeeded: aggregate.succeeded,
+        failed: aggregate.failed,
+        concurrency: 4,
+        projectId: auroraDeployment.bundle.projectId,
+        bundleFingerprint: auroraDeployment.bundle.projectFingerprint,
+        sdkVersion: auroraDeployment.sdk.version,
+        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      }));
       return NextResponse.json({
         ok: results.every((item) => item.state === "success"),
         batchRequestKey,

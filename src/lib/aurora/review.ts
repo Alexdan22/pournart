@@ -3,8 +3,10 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { runSerializedAuroraWrite } from "./database";
-import { parseRequestKey, stableJson, sha256 } from "./identity";
+import { buildEvaluationContextIdentity, parseRequestKey, stableJson, sha256 } from "./identity";
 import { verifyStoredAuroraResult } from "./serialization";
+import { resolveAuroraBinding } from "./bindings";
+import { deriveEvaluationLifecycle } from "./lifecycle";
 import {
   isAuroraReviewTransitionAllowed,
   ReviewNoteValidationError,
@@ -135,7 +137,7 @@ export async function getAuroraEvaluationDetail(evaluationId: string) {
     },
   });
   if (!evaluation) return undefined;
-  const [previous, newer] = await Promise.all([
+  const [previous, newer, product, newerSuccess, latestFailure] = await Promise.all([
     prisma.auroraEvaluation.findFirst({
       where: {
         productIdAtExecution: evaluation.productIdAtExecution,
@@ -152,7 +154,32 @@ export async function getAuroraEvaluationDetail(evaluationId: string) {
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
       select: comparisonSelect,
     }),
+    prisma.product.findUnique({ where: { id: evaluation.productIdAtExecution } }),
+    prisma.auroraEvaluation.findFirst({
+      where: {
+        productIdAtExecution: evaluation.productIdAtExecution,
+        status: "SUCCEEDED",
+        createdAt: { gt: evaluation.createdAt },
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    }),
+    prisma.auroraEvaluation.findFirst({
+      where: { productIdAtExecution: evaluation.productIdAtExecution, status: "FAILED" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    }),
   ]);
+  const bindingResolution = product ? resolveAuroraBinding(product) : undefined;
+  const binding = bindingResolution?.ok ? bindingResolution.binding : null;
+  const context = product && binding ? buildEvaluationContextIdentity(product, binding) : null;
+  const lifecycle = deriveEvaluationLifecycle({
+    evaluation,
+    product,
+    binding,
+    context,
+    ...(!bindingResolution || bindingResolution.ok ? {} : { bindingIssue: bindingResolution.state }),
+    newerSuccess,
+    latestFailure,
+  });
   let result = null;
   let resultIntegrityIssue: string | undefined;
   if (evaluation.status === "SUCCEEDED" && evaluation.resultJson) {
@@ -198,6 +225,7 @@ export async function getAuroraEvaluationDetail(evaluationId: string) {
       trigger: evaluation.trigger,
       createdAt: evaluation.createdAt.toISOString(),
       result,
+      lifecycle,
     },
     evaluationReview:
       reviewDto(evaluation.reviews.find((review) => review.targetKey === "evaluation")) ??

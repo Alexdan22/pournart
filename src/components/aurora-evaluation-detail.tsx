@@ -52,6 +52,12 @@ export function AuroraEvaluationDetailView({
           </span>
         </div>
         <p>{evaluation.productSlug}</p>
+        <p>
+          Lifecycle: <strong>{evaluation.lifecycle.state}</strong>
+          {evaluation.lifecycle.staleReasons.length
+            ? ` — ${evaluation.lifecycle.staleReasons.map((reason) => reason.label).join(" ")}`
+            : ""}
+        </p>
         <ReviewControl
           evaluationId={evaluation.id}
           target={{ scope: "evaluation" }}

@@ -100,6 +100,20 @@ function SuccessView({ value }: { value: Extract<AuroraEvaluationView, { state: 
   const outcomeStatus = decisions.some((decision) => record(decision.outcome).status === "needs-review") ? "needs-review" : "accepted";
   return (
     <div className="aurora-success">
+      {value.lifecycle?.state === "stale" ? (
+        <PanelMessage
+          title="Previous evaluation is stale"
+          tone="warning"
+          message={value.lifecycle.staleReasons.map((reason) => reason.label).join(" ")}
+        />
+      ) : null}
+      {value.lifecycle?.latestRefreshFailure ? (
+        <PanelMessage
+          title="Latest refresh failed"
+          tone="warning"
+          message={`The valid result below is retained. Failure codes: ${value.lifecycle.latestRefreshFailure.issueCodes.join(", ") || "unavailable"}.`}
+        />
+      ) : null}
       <div className={`aurora-outcome ${outcomeStatus}`}>
         {outcomeStatus === "accepted" ? <CheckCircle2 aria-hidden /> : <ShieldAlert aria-hidden />}
         <div>
@@ -120,6 +134,9 @@ function SuccessView({ value }: { value: Extract<AuroraEvaluationView, { state: 
           <Detail label="ProductDNA" value={value.binding.productDnaProductId} />
           <Detail label="Product artifact" value={value.binding.productDnaArtifactId} />
           <Detail label="RuleSet" value={value.binding.ruleSetDomainId} />
+          <Detail label="Lifecycle" value={value.lifecycle?.state ?? "current"} />
+          <Detail label="Lookup source" value={value.lookupSource ?? "runtime"} />
+          <Detail label="Cache" value={value.cacheStatus ?? "miss"} />
           <Detail label="Project" value={value.health.projectId} />
           <Detail label="Bundle fingerprint" value={String(record(trace.projectFingerprint).value ?? value.health.projectFingerprint ?? "Unavailable")} />
           <Detail label="Input fingerprint" value={String(record(trace.inputFingerprint).value ?? "Unavailable")} />

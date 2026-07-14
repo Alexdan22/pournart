@@ -19,12 +19,16 @@ import {
   evaluationFromRecord,
   findCurrentSuccessfulEvaluation,
   findEvaluationByRequestKey,
+  findLatestFailedEvaluation,
   findLatestEvaluationAttempt,
+  findLatestSuccessfulEvaluation,
+  invalidateCachedEvaluation,
   persistEvaluation,
 } from "./persistence";
 import { AuroraIdempotencyConflictError, withEvaluationSingleFlight } from "./idempotency";
 import { AuroraPersistenceBusyError } from "./database";
-import { auroraInitialization } from "./runtime";
+import { auroraDeployment, auroraInitialization } from "./runtime";
+import { deriveEvaluationLifecycle } from "./lifecycle";
 import type { AuroraCatalogProduct, AuroraEvaluationView } from "./types";
 
 export type EvaluateProductOptions = Readonly<{
@@ -77,20 +81,76 @@ export async function evaluateProductIntelligence(
       if (existing) {
         const expected = serializeRequestIdentity(requestIdentity).fingerprint;
         if (existing.requestIdentityFingerprint !== expected) throw new AuroraIdempotencyConflictError();
-        return evaluationFromRecord(existing, bindingResolution.binding, "database");
+        const lifecycle = deriveEvaluationLifecycle({
+          evaluation: existing,
+          product,
+          binding: bindingResolution.binding,
+          context,
+        });
+        logLookup(product.id, requestMode, "database", "hit", 0);
+        return evaluationFromRecord(existing, bindingResolution.binding, "database", {
+          cacheStatus: "hit",
+          lifecycle,
+        });
       }
       if (requestMode === "REUSE_CURRENT") {
         const cached = cachedEvaluation(context.applicationContextFingerprint);
-        if (cached) return cached;
+        if (cached) {
+          logLookup(product.id, requestMode, "process-cache", "hit", 0);
+          return { ...cached, cacheStatus: "hit" };
+        }
         const persisted = await findCurrentSuccessfulEvaluation(
           product.id,
           context.applicationContextFingerprint,
         );
         if (persisted) {
-          const view = evaluationFromRecord(persisted, bindingResolution.binding, "database");
+          const latestFailure = await findLatestFailedEvaluation(
+            product.id,
+            context.applicationContextFingerprint,
+          );
+          const lifecycle = deriveEvaluationLifecycle({
+            evaluation: persisted,
+            product,
+            binding: bindingResolution.binding,
+            context,
+            latestFailure,
+          });
+          const view = evaluationFromRecord(persisted, bindingResolution.binding, "database", {
+            cacheStatus: "hit",
+            lifecycle,
+          });
           cacheEvaluation(context.applicationContextFingerprint, view);
+          logLookup(product.id, requestMode, "database", "hit", 0);
           return view;
         }
+        logLookup(product.id, requestMode, "runtime", "miss", 0);
+      } else if (requestMode === "RETRY") {
+        const latestFailure = await findLatestFailedEvaluation(
+          product.id,
+          context.applicationContextFingerprint,
+        );
+        if (!latestFailure) {
+          const persisted = await findCurrentSuccessfulEvaluation(
+            product.id,
+            context.applicationContextFingerprint,
+          );
+          if (persisted) {
+            const lifecycle = deriveEvaluationLifecycle({
+              evaluation: persisted,
+              product,
+              binding: bindingResolution.binding,
+              context,
+            });
+            logLookup(product.id, requestMode, "database", "hit", 0);
+            return evaluationFromRecord(persisted, bindingResolution.binding, "database", {
+              cacheStatus: "hit",
+              lifecycle,
+            });
+          }
+        }
+        logLookup(product.id, requestMode, "runtime", "bypass", 0);
+      } else {
+        logLookup(product.id, requestMode, "runtime", "bypass", 0);
       }
       if (!auroraInitialization.ok)
         return {
@@ -116,7 +176,17 @@ export async function evaluateProductIntelligence(
         response,
         durationMs: performance.now() - startedAt,
       });
-      const view = evaluationFromRecord(record, bindingResolution.binding, "runtime");
+      const lifecycle = deriveEvaluationLifecycle({
+        evaluation: record,
+        product,
+        binding: bindingResolution.binding,
+        context,
+      });
+      const view = evaluationFromRecord(record, bindingResolution.binding, "runtime", {
+        cacheStatus: requestMode === "REUSE_CURRENT" ? "miss" : "bypass",
+        lifecycle,
+      });
+      if (view.state !== "success") invalidateCachedEvaluation(context.applicationContextFingerprint);
       cacheEvaluation(context.applicationContextFingerprint, view);
       console.info(
         JSON.stringify({
@@ -124,8 +194,12 @@ export async function evaluateProductIntelligence(
           productId: product.id,
           bindingId: bindingResolution.binding.bindingId,
           projectId: bindingResolution.binding.projectId,
+          bundleFingerprint: auroraDeployment.bundle.projectFingerprint,
+          sdkVersion: auroraDeployment.sdk.version,
           stage: response.ok ? "success" : response.stage,
           lookupSource: "runtime",
+          cacheStatus: requestMode === "REUSE_CURRENT" ? "miss" : "bypass",
+          durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
         }),
       );
       return view;
@@ -223,12 +297,37 @@ export async function getLatestProductIntelligence(productId: string) {
   if (!resolved.ok) return undefined;
   const context = buildEvaluationContextIdentity(product, resolved.binding);
   const cached = cachedEvaluation(context.applicationContextFingerprint);
-  if (cached) return cached;
+  if (cached) return { ...cached, cacheStatus: "hit" as const };
+  const latestFailure = await findLatestFailedEvaluation(product.id);
   const current = await findCurrentSuccessfulEvaluation(product.id, context.applicationContextFingerprint);
   if (current) {
-    const view = evaluationFromRecord(current, resolved.binding, "database");
+    const lifecycle = deriveEvaluationLifecycle({
+      evaluation: current,
+      product,
+      binding: resolved.binding,
+      context,
+      latestFailure,
+    });
+    const view = evaluationFromRecord(current, resolved.binding, "database", {
+      cacheStatus: "hit",
+      lifecycle,
+    });
     cacheEvaluation(context.applicationContextFingerprint, view);
     return view;
+  }
+  const latestSuccess = await findLatestSuccessfulEvaluation(product.id);
+  if (latestSuccess) {
+    const lifecycle = deriveEvaluationLifecycle({
+      evaluation: latestSuccess,
+      product,
+      binding: resolved.binding,
+      context,
+      latestFailure,
+    });
+    return evaluationFromRecord(latestSuccess, resolved.binding, "database", {
+      cacheStatus: "miss",
+      lifecycle,
+    });
   }
   const latest = await findLatestEvaluationAttempt(product.id);
   return latest ? evaluationFromRecord(latest, resolved.binding, "database") : undefined;
@@ -236,4 +335,26 @@ export async function getLatestProductIntelligence(productId: string) {
 
 export function clearLatestProductIntelligence() {
   clearPersistedEvaluationCache();
+}
+
+function logLookup(
+  productId: string,
+  requestMode: AuroraRequestMode,
+  lookupSource: "process-cache" | "database" | "runtime",
+  cacheStatus: "hit" | "miss" | "bypass",
+  durationMs: number,
+) {
+  console.info(
+    JSON.stringify({
+      event: "aurora.evaluation-lookup",
+      productId,
+      requestMode,
+      lookupSource,
+      cacheStatus,
+      durationMs: Math.max(0, Math.round(durationMs)),
+      projectId: auroraDeployment.bundle.projectId,
+      bundleFingerprint: auroraDeployment.bundle.projectFingerprint,
+      sdkVersion: auroraDeployment.sdk.version,
+    }),
+  );
 }

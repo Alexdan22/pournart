@@ -48,6 +48,11 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [progress, setProgress] = useState({ complete: 0, total: 0 });
+  const [lastBatch, setLastBatch] = useState<{
+    key: string;
+    productIds: readonly string[];
+    mode: "reuse-current" | "re-evaluate" | "retry";
+  } | null>(null);
   const [pending, startTransition] = useTransition();
   const visible = useMemo(
     () =>
@@ -73,9 +78,15 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
     });
   }
 
-  function evaluateSelected() {
-    const ids = [...selected];
+  function evaluateSelected(
+    mode: "reuse-current" | "re-evaluate" | "retry",
+    retryBatch = false,
+  ) {
+    const ids = retryBatch && lastBatch ? [...lastBatch.productIds] : [...selected];
     if (!ids.length) return;
+    const batchRequestKey = retryBatch && lastBatch ? lastBatch.key : crypto.randomUUID();
+    const requestMode = retryBatch && lastBatch ? lastBatch.mode : mode;
+    setLastBatch({ key: batchRequestKey, productIds: ids, mode: requestMode });
     setProgress({ complete: 0, total: ids.length });
     startTransition(async () => {
       let collected: AuroraEvaluationView[];
@@ -84,9 +95,9 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            batchRequestKey: crypto.randomUUID(),
+            batchRequestKey,
             productIds: ids,
-            mode: "reuse-current",
+            mode: requestMode,
           }),
         });
         const body = (await response.json()) as { results?: AuroraEvaluationView[] };
@@ -117,8 +128,14 @@ export function AuroraCatalogWorkspace({ initialItems }: { initialItems: readonl
         <select value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)} aria-label="Aurora state filter">
           {filters.map((value) => <option value={value} key={value}>{label(value)}</option>)}
         </select>
-        <button className="admin-button primary" type="button" disabled={pending || selected.size === 0} onClick={evaluateSelected}>
+        <button className="admin-button primary" type="button" disabled={pending || selected.size === 0} onClick={() => evaluateSelected("reuse-current")}>
           <Play aria-hidden size={15} /> Evaluate selected ({selected.size})
+        </button>
+        <button className="admin-button ghost" type="button" disabled={pending || selected.size === 0} onClick={() => evaluateSelected("re-evaluate")}>
+          Re-evaluate
+        </button>
+        <button className="admin-button ghost" type="button" disabled={pending || !lastBatch} onClick={() => evaluateSelected("retry", true)}>
+          Retry last batch
         </button>
       </div>
       <p className="aurora-progress" aria-live="polite">

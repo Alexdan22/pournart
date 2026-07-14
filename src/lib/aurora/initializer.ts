@@ -54,7 +54,13 @@ export function initializeAurora(input: {
 
   const service = new AuroraApplicationService(loaded.runtime, {
     log(event) {
-      input.log?.({ event: "aurora.intelligence", ...event });
+      input.log?.({
+        event: "aurora.intelligence",
+        stage: safeString(event.stage) ?? "unknown",
+        durationMs: safeNumber(event.durationMs),
+        projectId: input.expectedProjectId,
+        issueCodes: safeIssueCodes(event.issueCodes),
+      });
     },
   });
   return {
@@ -63,6 +69,20 @@ export function initializeAurora(input: {
     service,
     health: Object.freeze({ ...base, ok: true, projectFingerprint: fingerprint, issueCodes: Object.freeze([]) }) satisfies AuroraInitializationHealth,
   };
+}
+
+function safeString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function safeNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+}
+
+function safeIssueCodes(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").slice(0, 64)
+    : [];
 }
 
 function healthFailure(

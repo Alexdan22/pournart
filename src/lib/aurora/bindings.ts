@@ -77,25 +77,14 @@ export type BindingManifestHealth = Readonly<{
 }>;
 
 const artifactDirectory = join(process.cwd(), "vendor", "aurora");
-const repositoryManifestValue = JSON.parse(
-  readFileSync(join(artifactDirectory, "binding-manifest.json"), "utf8"),
-) as unknown;
-const repositoryBundleText = readFileSync(join(artifactDirectory, "aurora-project.json"), "utf8");
-const repositoryBundleValue = JSON.parse(repositoryBundleText) as unknown;
-const repositoryDeploymentValue = JSON.parse(
-  readFileSync(join(artifactDirectory, "deployment-manifest.json"), "utf8"),
-) as unknown;
-
-const loaded = validateBindingManifest(
-  repositoryManifestValue,
-  repositoryBundleValue,
-  repositoryDeploymentValue,
-  sha256(repositoryBundleText),
-);
+const loaded = loadRepositoryBindingManifest();
 
 export const auroraBindingManifestHealth = loaded.health;
 export const auroraBindingManifestFingerprint = loaded.health.manifestFingerprint ?? "invalid";
 export const auroraProductBindings = loaded.bindings;
+export function currentAuroraArtifactFingerprint(artifactId: string) {
+  return loaded.artifactFingerprints.get(artifactId);
+}
 
 const bindingBySlug = new Map(auroraProductBindings.map((item) => [item.expectedSlug, item]));
 
@@ -170,7 +159,11 @@ export function validateBindingManifest(
   bundleValue: unknown,
   deploymentValue: unknown,
   actualBundleSha256?: string,
-): { readonly health: BindingManifestHealth; readonly bindings: readonly AuroraProductBinding[] } {
+): {
+  readonly health: BindingManifestHealth;
+  readonly bindings: readonly AuroraProductBinding[];
+  readonly artifactFingerprints: ReadonlyMap<string, string>;
+} {
   const manifestResult = manifestSchema.safeParse(manifestValue);
   const bundle = record(bundleValue);
   const deployment = record(deploymentValue);
@@ -178,10 +171,12 @@ export function validateBindingManifest(
   const artifacts = array(bundle.artifacts).map(record);
   const productArtifacts = new Map<string, string>();
   const ruleSetArtifacts = new Map<string, string>();
+  const artifactFingerprints = new Map<string, string>();
   for (const artifact of artifacts) {
     const reference = record(artifact.reference);
     const content = record(artifact.content);
     const artifactId = typeof reference.artifactId === "string" ? reference.artifactId : "";
+    if (artifactId) artifactFingerprints.set(artifactId, sha256(stableJson(artifact.content)));
     if (reference.kind === "product-dna") {
       const productId = record(content.identity).productId;
       productArtifacts.set(artifactId, typeof productId === "string" ? productId : "");
@@ -211,6 +206,7 @@ export function validateBindingManifest(
         ruleSetCount: ruleSetArtifacts.size,
       }),
       bindings: Object.freeze([]),
+      artifactFingerprints,
     };
 
   const manifest = manifestResult.data;
@@ -245,7 +241,36 @@ export function validateBindingManifest(
       ruleSetCount: ruleSetArtifacts.size,
     }),
     bindings: Object.freeze(bindings),
+    artifactFingerprints,
   };
+}
+
+function loadRepositoryBindingManifest(): ReturnType<typeof validateBindingManifest> {
+  try {
+    const manifestValue = JSON.parse(
+      readFileSync(join(artifactDirectory, "binding-manifest.json"), "utf8"),
+    ) as unknown;
+    const bundleText = readFileSync(join(artifactDirectory, "aurora-project.json"), "utf8");
+    const bundleValue = JSON.parse(bundleText) as unknown;
+    const deploymentValue = JSON.parse(
+      readFileSync(join(artifactDirectory, "deployment-manifest.json"), "utf8"),
+    ) as unknown;
+    return validateBindingManifest(manifestValue, bundleValue, deploymentValue, sha256(bundleText));
+  } catch {
+    return {
+      health: Object.freeze({
+        ok: false,
+        issueCodes: Object.freeze(["BINDING_ARTIFACT_READ_FAILURE"]),
+        bundleSha256: "",
+        bundleFingerprint: "",
+        entryCount: 0,
+        productDnaCount: 0,
+        ruleSetCount: 0,
+      }) satisfies BindingManifestHealth,
+      bindings: Object.freeze([]) as readonly AuroraProductBinding[],
+      artifactFingerprints: new Map<string, string>(),
+    };
+  }
 }
 
 function validateManifestIdentities(
